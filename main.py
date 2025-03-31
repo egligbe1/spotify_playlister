@@ -28,7 +28,7 @@ TOKEN_FILE = 'token_info.json'
 RECORD_FILE = 'playlist_record.json'
 MAX_RETRIES = 3
 TIMEOUT = 30
-MAX_SONGS = 50  # Maximum songs in target playlist
+MAX_SONGS = 70  # Maximum songs in target playlist
 
 # Load or initialize playlist record
 def load_record():
@@ -152,10 +152,10 @@ def update_playlist_metadata(sp, target_playlist):
 # Main playlist update logic
 def update_playlist():
     now = datetime.datetime.now()
-    if now.weekday() != 5 or now.hour != 0 or now.minute > 5:
-        logging.info(f"Not scheduled time. Current time: {now}. Expected: Saturday 00:00-00:05.")
-        print(f"Not scheduled time. Current time: {now}. Expected: Saturday 00:00-00:05.")
-        return
+    # if now.weekday() != 5 or now.hour != 0 or now.minute > 5:
+    #     logging.info(f"Not scheduled time. Current time: {now}. Expected: Saturday 00:00-00:05.")
+    #     print(f"Not scheduled time. Current time: {now}. Expected: Saturday 00:00-00:05.")
+    #     return
 
     if not is_connected():
         logging.error("No internet connection.")
