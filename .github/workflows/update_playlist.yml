@@ -2,15 +2,15 @@ name: Update Spotify Playlist
 
 on:
   schedule:
-    - cron: '0 0 * * 6'  # Runs every Saturday at 00:00 UTC
-  workflow_dispatch:  # Allows manual triggering
+    - cron: '0 0 * * 6'
+  workflow_dispatch:
 
 jobs:
   update-playlist:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4  # Updated to v4 for consistency
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -34,7 +34,7 @@ jobs:
 
       - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # Updated to v4
         with:
           name: updater-logs
           path: updater.log
