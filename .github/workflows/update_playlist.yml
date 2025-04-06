@@ -2,7 +2,7 @@ name: Update Spotify Playlist
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '0 0 * * 6'
   workflow_dispatch:
 
 jobs:
