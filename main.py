@@ -118,8 +118,8 @@ def update_playlist_metadata(sp, target_playlist):
 # Main playlist update logic
 def update_playlist():
     now = datetime.datetime.now()
-    if now.weekday() != 5 or now.hour != 0 or now.minute > 5:
-        logging.info(f"Not scheduled time. Current time: {now} UTC. Expected: Saturday 00:00-00:05 UTC")
+    if now.weekday() != 5 or now.hour != 0 or now.minute > 59:
+        logging.info(f"Not scheduled time. Current time: {now} UTC. Expected: Saturday 00:00-00:59 UTC")
         return
 
     if not is_connected():
