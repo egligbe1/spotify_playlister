@@ -2,18 +2,19 @@ name: Update Spotify Playlist
 
 on:
   schedule:
-    - cron: '0-59 14 * * 1'
-  workflow_dispatch:
+    - cron: '0 15 * * 1'  # Runs every Monday at 15:00 UTC
+  workflow_dispatch:  # Allows manual triggering
 
 jobs:
   update-playlist:
     runs-on: ubuntu-latest
+    timeout-minutes: 15  # Prevent hanging
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4  # Updated to v4 for consistency
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5  # Updated to latest stable version
         with:
           python-version: '3.9'
 
@@ -27,14 +28,14 @@ jobs:
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
           SPOTIFY_USERNAME: ${{ secrets.SPOTIFY_USERNAME }}
-          SOURCE_PLAYLIST: ${{ vars.SOURCE_PLAYLIST }}
-          TARGET_PLAYLIST: ${{ vars.TARGET_PLAYLIST }}
-          PLAYLIST_DESCRIPTION: ${{ vars.PLAYLIST_DESCRIPTION }}
+          SOURCE_PLAYLIST: ${{ secrets.SOURCE_PLAYLIST }}
+          TARGET_PLAYLIST: ${{ secrets.TARGET_PLAYLIST }}
+          PLAYLIST_DESCRIPTION: ${{ secrets.PLAYLIST_DESCRIPTION }}
         run: python main.py
 
       - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v4  # Updated to v4
+        uses: actions/upload-artifact@v4
         with:
           name: updater-logs
           path: updater.log
