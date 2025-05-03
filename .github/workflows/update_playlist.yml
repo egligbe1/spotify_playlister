@@ -2,7 +2,7 @@ name: Update Spotify Playlist
 
 on:
   schedule:
-    - cron: '0 22 * * 1'  # Runs every Monday at 15:00 UTC
+    - cron: '0 8 * * 6'
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
