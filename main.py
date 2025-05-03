@@ -88,6 +88,7 @@ def get_spotify_client():
 
 # Update playlist metadata
 def update_playlist_metadata(sp, target_playlist):
+    # Update description
     try:
         results = sp.playlist_tracks(target_playlist, limit=1)
         if not results['items']:
@@ -95,14 +96,28 @@ def update_playlist_metadata(sp, target_playlist):
             return
         
         first_track = results['items'][0]['track']
-        artist_name = first_track['artists'][0]['name']
-        album_images = first_track['album']['images']
+        artist_name = first_track['artists'][0]['name'] if first_track['artists'] else "Unknown Artist"
+        logging.info(f"Extracted artist name: {artist_name}")
 
         description_template = os.getenv('PLAYLIST_DESCRIPTION')
+        if not description_template or '{}' not in description_template:
+            logging.error("Invalid or missing PLAYLIST_DESCRIPTION")
+            return
+        logging.info(f"Description template: {description_template}")
+
         description = description_template.format(artist_name)
         sp.playlist_change_details(target_playlist, description=description)
         logging.info(f"Updated description to: {description}")
+    except Exception as e:
+        logging.error(f"Description update failed: {e}")
 
+    # Update cover image
+    try:
+        results = sp.playlist_tracks(target_playlist, limit=1)
+        if not results['items']:
+            return
+        
+        album_images = results['items'][0]['track']['album']['images']
         if album_images:
             image_url = album_images[0]['url']
             response = requests.get(image_url, timeout=TIMEOUT)
@@ -113,13 +128,13 @@ def update_playlist_metadata(sp, target_playlist):
             sp.playlist_upload_cover_image(target_playlist, base64_image)
             logging.info("Cover image updated")
     except Exception as e:
-        logging.error(f"Metadata update failed: {e}")
+        logging.error(f"Cover image update failed: {e}")
 
 # Main playlist update logic
 def update_playlist():
     now = datetime.datetime.now(datetime.timezone.utc)
-    if now.weekday() != 0 or now.hour != 22:
-        logging.info(f"Not scheduled time. Current time: {now} UTC. Expected: Monday 22:00-23:00 UTC")
+    if now.weekday() != 5 or now.hour != 8:
+        logging.info(f"Not scheduled time. Current time: {now} UTC. Expected: Saturday 08:00-09:00 UTC")
         return
 
     if not is_connected():
