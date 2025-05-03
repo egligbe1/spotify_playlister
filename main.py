@@ -25,6 +25,7 @@ SCOPE = 'playlist-modify-public playlist-modify-private playlist-read-private ug
 REDIRECT_URI = 'http://localhost:8888/callback'
 TOKEN_FILE = 'token_info.json'
 RECORD_FILE = 'playlist_record.json'
+LAST_UPDATE_FILE = 'last_update.json'
 MAX_RETRIES = 3
 TIMEOUT = 30
 MAX_SONGS = 70
@@ -41,6 +42,20 @@ def load_record():
 def save_record(record):
     with open(RECORD_FILE, 'w') as f:
         json.dump(record, f)
+
+# Load last update date
+def load_last_update():
+    try:
+        with open(LAST_UPDATE_FILE, 'r') as f:
+            data = json.load(f)
+            return datetime.datetime.fromisoformat(data['last_update']).date()
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
+        return None
+
+# Save last update date
+def save_last_update(update_date):
+    with open(LAST_UPDATE_FILE, 'w') as f:
+        json.dump({'last_update': update_date.isoformat()}, f)
 
 # Check internet connection
 def is_connected():
@@ -150,8 +165,15 @@ def update_playlist_metadata(sp, target_playlist):
 # Main playlist update logic
 def update_playlist():
     now = datetime.datetime.now(datetime.timezone.utc)
-    if now.weekday() != 5 or now.hour != 9:
-        logging.info(f"Not scheduled time. Current time: {now} UTC. Expected: Saturday 09:00-10:00 UTC")
+    if now.weekday() != 5:
+        logging.info(f"Not Saturday. Current time: {now} UTC. Expected: Any time on Saturday")
+        return
+
+    # Check if already updated this Saturday
+    current_date = now.date()
+    last_update_date = load_last_update()
+    if last_update_date and last_update_date == current_date:
+        logging.info(f"Playlist already updated on {current_date}. Skipping.")
         return
 
     if not is_connected():
@@ -206,8 +228,9 @@ def update_playlist():
         # Update metadata
         update_playlist_metadata(sp, target_playlist)
 
-        # Save the current track IDs
+        # Save the current track IDs and update date
         save_record(all_tracks)
+        save_last_update(current_date)
         logging.info("Playlist update completed")
     except Exception as e:
         logging.error(f"Update failed: {e}")
