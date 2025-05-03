@@ -30,7 +30,7 @@ jobs:
           SPOTIFY_USERNAME: ${{ secrets.SPOTIFY_USERNAME }}
           SOURCE_PLAYLIST: ${{ vars.SOURCE_PLAYLIST }}
           TARGET_PLAYLIST: ${{ vars.TARGET_PLAYLIST }}
-          PLAYLIST_DESCRIPTION: ${{ secrets.PLAYLIST_DESCRIPTION }}
+          PLAYLIST_DESCRIPTION: ${{ vars.PLAYLIST_DESCRIPTION }}
         run: python main.py
 
       - name: Upload logs
