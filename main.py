@@ -13,7 +13,7 @@ import base64
 from time import sleep
 import random
 
-# Load environment variables (from .env locally, GitHub Secrets in cloud)
+# Load environment variables (from .env locally, GitHub Secrets/Vars in cloud)
 load_dotenv()
 
 # Set up logging
@@ -78,9 +78,18 @@ def get_spotify_client():
             if auth_manager.is_token_expired(token_info):
                 auth_manager.refresh_access_token(token_info['refresh_token'])
                 logging.info("Token refreshed")
-            return spotipy.Spotify(auth_manager=auth_manager)
+            sp = spotipy.Spotify(auth_manager=auth_manager)
+            # Verify token scopes
+            current_user = sp.current_user()
+            token_scopes = auth_manager.scope.split()
+            required_scopes = SCOPE.split()
+            if not all(scope in token_scopes for scope in required_scopes):
+                logging.error(f"Token missing required scopes. Has: {token_scopes}, Needs: {required_scopes}")
+                return None
+            logging.info(f"Token scopes verified: {token_scopes}")
+            return sp
         except Exception as e:
-            logging.error(f"Token refresh failed: {e}")
+            logging.error(f"Token refresh or validation failed: {e}")
             return None
     else:
         logging.error("No token_info.json found. Run locally with --initial_setup first.")
@@ -89,27 +98,35 @@ def get_spotify_client():
 # Update playlist metadata
 def update_playlist_metadata(sp, target_playlist):
     # Update description
-    try:
-        results = sp.playlist_tracks(target_playlist, limit=1)
-        if not results['items']:
-            logging.warning("No tracks in target playlist")
-            return
-        
-        first_track = results['items'][0]['track']
-        artist_name = first_track['artists'][0]['name'] if first_track['artists'] else "Unknown Artist"
-        logging.info(f"Extracted artist name: {artist_name}")
+    for attempt in range(MAX_RETRIES):
+        try:
+            results = sp.playlist_tracks(target_playlist, limit=1)
+            logging.info(f"Playlist tracks API response: {len(results['items'])} items")
+            if not results['items']:
+                logging.warning("No tracks in target playlist")
+                return
+            
+            first_track = results['items'][0]['track']
+            artist_name = first_track['artists'][0]['name'] if first_track['artists'] else "Unknown Artist"
+            logging.info(f"Extracted artist name: {artist_name}")
 
-        description_template = os.getenv('PLAYLIST_DESCRIPTION')
-        if not description_template or '{}' not in description_template:
-            logging.error("Invalid or missing PLAYLIST_DESCRIPTION")
-            return
-        logging.info(f"Description template: {description_template}")
+            description_template = os.getenv('PLAYLIST_DESCRIPTION')
+            if not description_template or '{}' not in description_template:
+                logging.error("Invalid or missing PLAYLIST_DESCRIPTION")
+                return
+            logging.info(f"Description template: {description_template}")
 
-        description = description_template.format(artist_name)
-        sp.playlist_change_details(target_playlist, description=description)
-        logging.info(f"Updated description to: {description}")
-    except Exception as e:
-        logging.error(f"Description update failed: {e}")
+            description = description_template.format(artist_name)
+            sp.playlist_change_details(target_playlist, description=description)
+            logging.info(f"Updated description to: {description}")
+            break  # Success, exit retry loop
+        except Exception as e:
+            logging.error(f"Description update attempt {attempt + 1} failed: {e}")
+            if attempt < MAX_RETRIES - 1:
+                sleep(2)
+            else:
+                logging.error("Max retries reached for description update")
+                return
 
     # Update cover image
     try:
@@ -133,8 +150,8 @@ def update_playlist_metadata(sp, target_playlist):
 # Main playlist update logic
 def update_playlist():
     now = datetime.datetime.now(datetime.timezone.utc)
-    if now.weekday() != 5 or now.hour != 8:
-        logging.info(f"Not scheduled time. Current time: {now} UTC. Expected: Saturday 08:00-09:00 UTC")
+    if now.weekday() != 5 or now.hour != 9:
+        logging.info(f"Not scheduled time. Current time: {now} UTC. Expected: Saturday 09:00-10:00 UTC")
         return
 
     if not is_connected():
