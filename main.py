@@ -26,6 +26,7 @@ REDIRECT_URI = 'http://localhost:8888/callback'
 TOKEN_FILE = 'token_info.json'
 RECORD_FILE = 'playlist_record.json'
 LAST_UPDATE_FILE = 'last_update.json'
+PRIORITY_SONGS_FILE = 'priority_songs.json'
 MAX_RETRIES = 3
 TIMEOUT = 30
 MAX_SONGS = 70
@@ -68,6 +69,18 @@ def save_last_update(update_date):
         logging.debug(f"Saved last update date to {LAST_UPDATE_FILE}")
     except Exception as e:
         logging.error(f"Failed to save last update date: {e}")
+
+# Load priority songs
+def load_priority_songs():
+    try:
+        with open(PRIORITY_SONGS_FILE, 'r') as f:
+            data = json.load(f)
+            songs = data.get('priority_songs', [])
+            logging.debug(f"Loaded {len(songs)} priority songs: {songs}")
+            return songs
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
+        logging.info(f"No {PRIORITY_SONGS_FILE} found. No priority songs.")
+        return []
 
 # Check internet connection
 def is_connected():
@@ -209,6 +222,10 @@ def update_playlist():
         return
 
     try:
+        # Load priority songs
+        priority_songs = load_priority_songs()
+        logging.info(f"Priority songs to include: {len(priority_songs)}")
+
         # Fetch current tracks in the target playlist
         current_tracks = []
         results = sp.playlist_tracks(target_playlist)
@@ -224,22 +241,29 @@ def update_playlist():
         new_songs = [song for song in source_songs if song not in current_tracks]
         logging.info(f"Found {len(new_songs)} new tracks from source playlist")
 
-        # Combine all tracks (existing + new) and shuffle
-        all_tracks = current_tracks + new_songs
+        # Combine tracks: priority songs + other tracks (current + new)
+        other_tracks = current_tracks + new_songs
+        all_tracks = priority_songs + other_tracks
         random.shuffle(all_tracks)
-        logging.info(f"Shuffled all {len(all_tracks)} tracks (existing + new)")
+        logging.info(f"Shuffled all {len(all_tracks)} tracks (including {len(priority_songs)} priority songs)")
 
         # Clear the target playlist
         if current_tracks:
             sp.user_playlist_remove_all_occurrences_of_tracks(username, target_playlist, current_tracks)
             logging.info("Cleared all existing tracks from target playlist")
 
-        # Trim to MAX_SONGS if necessary and add shuffled tracks
+        # Trim to MAX_SONGS if necessary, preserving priority songs
         if len(all_tracks) > MAX_SONGS:
-            all_tracks = all_tracks[:MAX_SONGS]
-            logging.info(f"Trimmed to {MAX_SONGS} tracks")
+            num_priority = len(priority_songs)
+            if num_priority > MAX_SONGS:
+                logging.warning(f"Priority songs ({num_priority}) exceed MAX_SONGS ({MAX_SONGS}). Trimming priority songs.")
+                all_tracks = all_tracks[:MAX_SONGS]
+            else:
+                num_to_keep = MAX_SONGS - num_priority
+                all_tracks = priority_songs + other_tracks[:num_to_keep]
+                logging.info(f"Trimmed to {MAX_SONGS} tracks: {num_priority} priority + {num_to_keep} others")
         sp.user_playlist_add_tracks(username, target_playlist, all_tracks)
-        logging.info(f"Added {len(all_tracks)} shuffled tracks to target playlist")
+        logging.info(f"Added {len(all_tracks)} tracks to target playlist")
 
         # Update metadata
         update_playlist_metadata(sp, target_playlist)
