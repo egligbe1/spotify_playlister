@@ -2,14 +2,14 @@ name: Update Spotify Playlist
 
 on:
   schedule:
-    - cron: '0 0 * * 6'  # Runs every Saturday at 00:00 UTC
-  workflow_dispatch:  # Allows manual triggering
+    - cron: "0 0 * * 6" # Runs every Saturday at 00:00 UTC
+  workflow_dispatch: # Allows manual triggering
 
 jobs:
   update-playlist:
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # Prevent hanging
-    environment: production  # Specify the environment
+    timeout-minutes: 15 # Prevent hanging
+    environment: production # Specify the environment
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -17,7 +17,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: "3.9"
 
       - name: Install dependencies
         run: |
