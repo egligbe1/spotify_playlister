@@ -1,5 +1,4 @@
 .env
-playlist_record.json
 updater.log
 venv/
 __pycache__/
