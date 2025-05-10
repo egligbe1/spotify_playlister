@@ -5,6 +5,9 @@ on:
     - cron: "0 0 * * 6" # Runs every Saturday at 00:00 UTC
   workflow_dispatch: # Allows manual triggering
 
+permissions:
+  contents: write  # Allows pushing changes to the repo
+
 jobs:
   update-playlist:
     runs-on: ubuntu-latest
@@ -46,7 +49,7 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add last_update.json playlist_record.json priority_songs.json || echo "No files to add"
-          git commit -m "Update last_update.json, playlist_record.json, and priority_songs.json after playlist update" || echo "No changes to commit"
+          git diff --cached --quiet && echo "No changes to commit" || git commit -m "Update playlist data after sync"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
