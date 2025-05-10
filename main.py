@@ -44,10 +44,10 @@ def load_record():
         return []
 
 # Save playlist record
-def save_record(record):
+def save_record(track_data):
     try:
         with open(RECORD_FILE, 'w') as f:
-            json.dump(record, f)
+            json.dump(track_data, f, indent=2)
         logger.debug(f"Saved playlist record to {RECORD_FILE}")
     except Exception as e:
         logger.error(f"Failed to save playlist record: {e}")
@@ -298,6 +298,33 @@ def update_playlist():
         all_tracks = list(dict.fromkeys(all_tracks))  # Remove duplicates while preserving order
         duplicates_removed = original_count - len(all_tracks)
         logger.info(f"Combined {original_count} tracks, removed {duplicates_removed} duplicates, resulting in {len(all_tracks)} unique tracks")
+
+        # Fetch track metadata for all unique tracks
+        track_data = []
+        for i in range(0, len(all_tracks), 50):  # Batch requests (max 50 tracks per call)
+            batch = all_tracks[i:i + 50]
+            for attempt in range(MAX_RETRIES):
+                try:
+                    tracks_info = sp.tracks(batch)['tracks']
+                    for track in tracks_info:
+                        if track:
+                            track_data.append({
+                                "track": {
+                                    "id": track['id'],
+                                    "name": track['name'],
+                                    "artists": [{"name": artist['name']} for artist in track['artists']]
+                                }
+                            })
+                    break
+                except Exception as e:
+                    logger.warning(f"Track metadata fetch attempt {attempt + 1} failed: {e}")
+                    if attempt < MAX_RETRIES - 1:
+                        sleep(2)
+                    else:
+                        logger.error(f"Failed to fetch metadata for batch {batch}: {e}")
+        logger.info(f"Fetched metadata for {len(track_data)} tracks")
+
+        # Shuffle track IDs for playlist update
         random.shuffle(all_tracks)
         logger.info(f"Shuffled all {len(all_tracks)} tracks (including {len(priority_songs)} priority songs)")
 
@@ -305,6 +332,8 @@ def update_playlist():
         if len(all_tracks) > MAX_SONGS:
             logger.info(f"Trimming {len(all_tracks)} tracks to {MAX_SONGS} while preserving shuffle")
             all_tracks = all_tracks[:MAX_SONGS]
+            # Update track_data to match trimmed all_tracks
+            track_data = [item for item in track_data if item['track']['id'] in all_tracks]
             num_priority = len([track for track in all_tracks if track in priority_songs])
             logger.info(f"Trimmed to {MAX_SONGS} tracks with {num_priority} priority songs")
 
@@ -320,8 +349,8 @@ def update_playlist():
         # Update metadata using the actual top track
         update_playlist_metadata(sp, target_playlist, all_tracks)
 
-        # Save the current track IDs and update date
-        save_record(all_tracks)
+        # Save the track data with metadata and update date
+        save_record(track_data)
         save_last_update(current_date)
         logger.info("Playlist update completed")
     except Exception as e:
