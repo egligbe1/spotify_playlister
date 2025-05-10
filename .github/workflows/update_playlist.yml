@@ -58,7 +58,7 @@ jobs:
       - name: Notify on Telegram
         if: always()
         run: |
-          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage \
+          curl -s -X POST https://api.twitter.com/2/tweets \
             -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
             -d text="🎶 *Afrobeats on Rotation* Spotify playlist just got updated! 🔥\n\nClick below to stream trending music now:\n👉 https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8" \
             -d parse_mode=Markdown
@@ -68,9 +68,9 @@ jobs:
 
       - name: Post to Twitter
         if: success()
-        uses: noweh/post-tweet-v2-action@v1
+        uses: noweh/post-tweet-v2-action@v1.0
         with:
-          message: "🎶Afrobeats On Rotation just got updated with Fresh Afrobeats & Afro-fusion on Spotify! 🔥 Stream now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats"
+          message: "🎶 Our Spotify Playlist just got updated with fresh Afrobeats & Afro-fusion hits. Stream now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats"
           consumer-key: ${{ secrets.TWITTER_CONSUMER_API_KEY }}
           consumer-secret: ${{ secrets.TWITTER_CONSUMER_API_SECRET }}
           access-token: ${{ secrets.TWITTER_ACCESS_TOKEN }}
