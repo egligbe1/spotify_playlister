@@ -58,7 +58,7 @@ jobs:
       - name: Notify on Telegram
         if: always()
         run: |
-          curl -s -X POST https://api.twitter.com/2/tweets \
+          curl -s -X POST https://api.telegram.org/bot
             -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
             -d text="🎶 *Afrobeats on Rotation* Spotify playlist just got updated! 🔥\n\nClick below to stream trending music now:\n👉 https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8" \
             -d parse_mode=Markdown
