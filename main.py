@@ -76,8 +76,14 @@ def load_priority_songs():
         with open(PRIORITY_SONGS_FILE, 'r') as f:
             data = json.load(f)
             songs = data.get('priority_songs', [])
-            logging.debug(f"Loaded {len(songs)} priority songs: {songs}")
-            return songs
+            for song in songs:
+                if not all(key in song for key in ['track_id', 'song_name', 'artist_name']):
+                    logging.warning(f"Invalid priority song entry: {song}. Skipping.")
+                    continue
+                logging.debug(f"Priority song: {song['song_name']} by {song['artist_name']} ({song['track_id']})")
+            valid_songs = [song['track_id'] for song in songs if all(key in song for key in ['track_id', 'song_name', 'artist_name'])]
+            logging.info(f"Loaded {len(valid_songs)} valid priority songs")
+            return valid_songs
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         logging.info(f"No {PRIORITY_SONGS_FILE} found. No priority songs.")
         return []
@@ -222,7 +228,7 @@ def update_playlist():
         return
 
     try:
-        # Load priority songs
+        # Load priority songs (track IDs only)
         priority_songs = load_priority_songs()
         logging.info(f"Priority songs to include: {len(priority_songs)}")
 
@@ -241,9 +247,8 @@ def update_playlist():
         new_songs = [song for song in source_songs if song not in current_tracks]
         logging.info(f"Found {len(new_songs)} new tracks from source playlist")
 
-        # Combine tracks: priority songs + other tracks (current + new)
-        other_tracks = current_tracks + new_songs
-        all_tracks = priority_songs + other_tracks
+        # Combine all tracks (priority + current + new) and shuffle
+        all_tracks = priority_songs + current_tracks + new_songs
         random.shuffle(all_tracks)
         logging.info(f"Shuffled all {len(all_tracks)} tracks (including {len(priority_songs)} priority songs)")
 
@@ -254,13 +259,14 @@ def update_playlist():
 
         # Trim to MAX_SONGS if necessary, preserving priority songs
         if len(all_tracks) > MAX_SONGS:
-            num_priority = len(priority_songs)
+            num_priority = len([track for track in all_tracks if track in priority_songs])
             if num_priority > MAX_SONGS:
-                logging.warning(f"Priority songs ({num_priority}) exceed MAX_SONGS ({MAX_SONGS}). Trimming priority songs.")
+                logging.warning(f"Priority songs ({num_priority}) exceed MAX_SONGS ({MAX_SONGS}). Trimming all tracks.")
                 all_tracks = all_tracks[:MAX_SONGS]
             else:
                 num_to_keep = MAX_SONGS - num_priority
-                all_tracks = priority_songs + other_tracks[:num_to_keep]
+                non_priority_tracks = [track for track in all_tracks if track not in priority_songs]
+                all_tracks = [track for track in all_tracks if track in priority_songs] + non_priority_tracks[:num_to_keep]
                 logging.info(f"Trimmed to {MAX_SONGS} tracks: {num_priority} priority + {num_to_keep} others")
         sp.user_playlist_add_tracks(username, target_playlist, all_tracks)
         logging.info(f"Added {len(all_tracks)} tracks to target playlist")
