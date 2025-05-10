@@ -247,8 +247,12 @@ def update_playlist():
         new_songs = [song for song in source_songs if song not in current_tracks]
         logging.info(f"Found {len(new_songs)} new tracks from source playlist")
 
-        # Combine all tracks (priority + current + new) and shuffle
+        # Combine all tracks (priority + current + new) and remove duplicates
         all_tracks = priority_songs + current_tracks + new_songs
+        original_count = len(all_tracks)
+        all_tracks = list(dict.fromkeys(all_tracks))  # Remove duplicates while preserving order
+        duplicates_removed = original_count - len(all_tracks)
+        logging.info(f"Combined {original_count} tracks, removed {duplicates_removed} duplicates, resulting in {len(all_tracks)} unique tracks")
         random.shuffle(all_tracks)
         logging.info(f"Shuffled all {len(all_tracks)} tracks (including {len(priority_songs)} priority songs)")
 
