@@ -73,13 +73,16 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
+      - name: Generate Tweet Message
+        run: echo "TWEET_MESSAGE=🎶 Our Spotify Playlist updated with fresh Afrobeats & Afro-fusion hits on $(date +%Y-%m-%d)! Stream now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats" >> $GITHUB_ENV
+
       - name: Post to Twitter
         id: twitter-post
         if: success()
         continue-on-error: true
         uses: noweh/post-tweet-v2-action@v1.0
         with:
-          message: "🎶 Our Spotify Playlist updated with fresh Afrobeats & Afro-fusion hits on $(date +%Y-%m-%d)! Stream now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats"
+          message: ${{ env.TWEET_MESSAGE }}
           consumer-key: ${{ secrets.TWITTER_API_KEY }}
           consumer-secret: ${{ secrets.TWITTER_API_SECRET }}
           access-token: ${{ secrets.TWITTER_ACCESS_TOKEN }}
