@@ -153,52 +153,92 @@ def update_playlist_metadata(sp, target_playlist, all_tracks):
         logger.error("Invalid or missing PLAYLIST_DESCRIPTION")
         return
 
-    # Update description using the first valid track from all_tracks
+    # Update description using the actual top track post-update
     artist_name = "Unknown Artist"
+    track_name = "Unknown Track"
     for attempt in range(MAX_RETRIES):
         try:
-            if not all_tracks:
-                logger.warning("No tracks available for description update")
+            # Fetch the actual top track
+            for offset in range(3):  # Try first 3 tracks
+                results = sp.playlist_tracks(target_playlist, limit=1, offset=offset)
+                logger.debug(f"Playlist tracks API response (offset {offset}): {len(results['items'])} items")
+                if not results['items'] or not results['items'][0].get('track'):
+                    logger.warning(f"No valid track at offset {offset}")
+                    continue
+                first_track = results['items'][0]['track']
+                artist_name = first_track['artists'][0]['name'] if first_track.get('artists') else "Unknown Artist"
+                track_name = first_track['name'] if first_track.get('name') else "Unknown Track"
+                logger.info(f"Extracted artist name for description: {artist_name} (Track: {track_name})")
+                description = description_template.format(artist_name)
+                sp.playlist_change_details(target_playlist, description=description)
+                logger.info(f"Updated description to: {description}")
+                break  # Exit offset loop on success
+            else:
+                # Fallback to all_tracks[0]
+                logger.warning("No valid tracks found in playlist. Falling back to first track in all_tracks.")
+                if all_tracks:
+                    track = sp.track(all_tracks[0])
+                    artist_name = track['artists'][0]['name'] if track.get('artists') else "Unknown Artist"
+                    track_name = track['name'] if track.get('name') else "Unknown Track"
+                    logger.info(f"Extracted fallback artist name: {artist_name} (Track: {track_name})")
+                    description = description_template.format(artist_name)
+                    sp.playlist_change_details(target_playlist, description=description)
+                    logger.info(f"Updated description with fallback: {description}")
+                else:
+                    logger.warning("No tracks available. Using default artist name.")
+                    description = description_template.format(artist_name)
+                    sp.playlist_change_details(target_playlist, description=description)
+                    logger.info(f"Updated description with default: {description}")
                 break
-            track_id = all_tracks[0]  # First track in final shuffled list
-            track = sp.track(track_id)
-            logger.debug(f"Fetched track details for ID {track_id}: {track['name']}")
-            artist_name = track['artists'][0]['name'] if track.get('artists') else "Unknown Artist"
-            logger.info(f"Extracted artist name for description: {artist_name}")
-            description = description_template.format(artist_name)
-            sp.playlist_change_details(target_playlist, description=description)
-            logger.info(f"Updated description to: {description}")
-            break
+            break  # Exit retry loop on success
         except Exception as e:
-            logger.error(f"Description update attempt {attempt + 1} failed for track {track_id}: {e}")
+            logger.error(f"Description update attempt {attempt + 1} failed: {e}")
             if attempt < MAX_RETRIES - 1:
                 sleep(2)
             else:
-                logger.warning("Max retries reached for description update. Using fallback artist name.")
+                logger.warning("Max retries reached for description update. Using default artist name.")
                 description = description_template.format(artist_name)
                 sp.playlist_change_details(target_playlist, description=description)
-                logger.info(f"Updated description with fallback: {description}")
+                logger.info(f"Updated description with default: {description}")
 
-    # Update cover image using the first valid track
+    # Update cover image using the actual top track
     try:
-        if not all_tracks:
-            logger.warning("No tracks available for cover image update")
-            return
-        track_id = all_tracks[0]
-        track = sp.track(track_id)
-        logger.debug(f"Fetched track details for cover image: {track['name']}")
-        album_images = track['album']['images']
-        if album_images:
-            image_url = album_images[0]['url']
-            response = requests.get(image_url, timeout=TIMEOUT)
-            img = Image.open(io.BytesIO(response.content)).resize((640, 640), Image.Resampling.LANCZOS)
-            img_byte_arr = io.BytesIO()
-            img.convert('RGB').save(img_byte_arr, dormant='JPEG', quality=85)
-            base64_image = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
-            sp.playlist_upload_cover_image(target_playlist, base64_image)
-            logger.info("Cover image updated")
+        for offset in range(3):  # Try first 3 tracks
+            results = sp.playlist_tracks(target_playlist, limit=1, offset=offset)
+            if not results['items'] or not results['items'][0].get('track'):
+                logger.warning(f"No valid track for cover image at offset {offset}")
+                continue
+            first_track = results['items'][0]['track']
+            track_name = first_track['name'] if first_track.get('name') else "Unknown Track"
+            album_images = first_track['album']['images']
+            if album_images:
+                image_url = album_images[0]['url']
+                response = requests.get(image_url, timeout=TIMEOUT)
+                img = Image.open(io.BytesIO(response.content)).resize((640, 640), Image.Resampling.LANCZOS)
+                img_byte_arr = io.BytesIO()
+                img.convert('RGB').save(img_byte_arr, format='JPEG', quality=85)
+                base64_image = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
+                sp.playlist_upload_cover_image(target_playlist, base64_image)
+                logger.info(f"Cover image updated for track: {track_name}")
+                break
+        else:
+            # Fallback to all_tracks[0]
+            logger.warning("No valid tracks found for cover image. Falling back to first track in all_tracks.")
+            if all_tracks:
+                track = sp.track(all_tracks[0])
+                track_name = track['name'] if track.get('name') else "Unknown Track"
+                album_images = track['album']['images']
+                if album_images:
+                    image_url = album_images[0]['url']
+                    response = requests.get(image_url, timeout=TIMEOUT)
+                    img = Image.open(io.BytesIO(response.content)).resize((640, 640), Image.Resampling.LANCZOS)
+                    img_byte_arr = io.BytesIO()
+                    img.convert('RGB').save(img_byte_arr, format='JPEG', quality=85)
+                    base64_image = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
+                    sp.playlist_upload_cover_image(target_playlist, base64_image)
+                    logger.info(f"Cover image updated with fallback for track: {track_name}")
     except Exception as e:
-        logger.error(f"Cover image update failed for track {track_id}: {e}")
+        logger.error(f"Cover image update failed: {e}")
 
 # Main playlist update logic
 def update_playlist():
@@ -261,26 +301,23 @@ def update_playlist():
         random.shuffle(all_tracks)
         logger.info(f"Shuffled all {len(all_tracks)} tracks (including {len(priority_songs)} priority songs)")
 
+        # Trim to MAX_SONGS if necessary, preserving shuffle
+        if len(all_tracks) > MAX_SONGS:
+            logger.info(f"Trimming {len(all_tracks)} tracks to {MAX_SONGS} while preserving shuffle")
+            all_tracks = all_tracks[:MAX_SONGS]
+            num_priority = len([track for track in all_tracks if track in priority_songs])
+            logger.info(f"Trimmed to {MAX_SONGS} tracks with {num_priority} priority songs")
+
         # Clear the target playlist
         if current_tracks:
             sp.user_playlist_remove_all_occurrences_of_tracks(username, target_playlist, current_tracks)
             logger.info("Cleared all existing tracks from target playlist")
 
-        # Trim to MAX_SONGS if necessary, preserving priority songs
-        if len(all_tracks) > MAX_SONGS:
-            num_priority = len([track for track in all_tracks if track in priority_songs])
-            if num_priority > MAX_SONGS:
-                logger.warning(f"Priority songs ({num_priority}) exceed MAX_SONGS ({MAX_SONGS}). Trimming all tracks.")
-                all_tracks = all_tracks[:MAX_SONGS]
-            else:
-                num_to_keep = MAX_SONGS - num_priority
-                non_priority_tracks = [track for track in all_tracks if track not in priority_songs]
-                all_tracks = [track for track in all_tracks if track in priority_songs] + non_priority_tracks[:num_to_keep]
-                logger.info(f"Trimmed to {MAX_SONGS} tracks: {num_priority} priority + {num_to_keep} others")
+        # Add tracks to the playlist
         sp.user_playlist_add_tracks(username, target_playlist, all_tracks)
         logger.info(f"Added {len(all_tracks)} tracks to target playlist")
 
-        # Update metadata
+        # Update metadata using the actual top track
         update_playlist_metadata(sp, target_playlist, all_tracks)
 
         # Save the current track IDs and update date
