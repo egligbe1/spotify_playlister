@@ -27,7 +27,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install tweepy  # Install tweepy for Twitter post
 
       - name: Run playlist updater
         env:
@@ -37,15 +36,24 @@ jobs:
           SOURCE_PLAYLIST: ${{ vars.SOURCE_PLAYLIST }}
           TARGET_PLAYLIST: ${{ vars.TARGET_PLAYLIST }}
           PLAYLIST_DESCRIPTION: ${{ vars.PLAYLIST_DESCRIPTION }}
-        run: python main.py || exit 1
+        run: |
+          python main.py
+          if [ $? -ne 0 ]; then
+            echo "Playlist updater script failed." >&2
+            exit 1
+          fi
 
       - name: Debug file presence
         run: |
           echo "Directory contents:"
           ls -la
-          if [ -f last_update.json ]; then echo "last_update.json exists"; else echo "last_update.json not found"; fi
-          if [ -f playlist_record.json ]; then echo "playlist_record.json exists"; else echo "playlist_record.json not found"; fi
-          if [ -f priority_songs.json ]; then echo "priority_songs.json exists"; else echo "priority_songs.json not found"; fi
+          for file in last_update.json playlist_record.json priority_songs.json; do
+            if [ -f "$file" ]; then
+              echo "$file exists"
+            else
+              echo "$file not found"
+            fi
+          done
 
       - name: Commit updated files
         run: |
@@ -64,9 +72,6 @@ jobs:
             -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
             -d text="🎶 *Afrobeats on Rotation* Spotify playlist just got updated! 🔥\n\nClick below to stream trending music now:\n👉 https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8" \
             -d parse_mode=Markdown
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Tweet Playlist Update
         if: always()
@@ -101,4 +106,4 @@ EOF
         uses: actions/upload-artifact@v4
         with:
           name: updater-logs
-          path: updater.log
+          path: updater.log || echo "Log file not found, skipping upload."
