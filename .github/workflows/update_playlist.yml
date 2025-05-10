@@ -81,42 +81,55 @@ jobs:
         run: |
           if jq -e '.[] | select(.track != null) | .track.name' playlist_record.json >/dev/null 2>&1; then
             echo "has_metadata=true" >> $GITHUB_OUTPUT
-            echo "Tweet message with metadata: 🎶 Afrobeats On Rotation Spotify Playlist just got updated on $(date +%Y-%m-%d)! 🔥 Top track: $(jq -r '.[] | select(.track != null) | .track.name' playlist_record.json | head -1) by $(jq -r '.[] | select(.track != null) | .track.artists[0].name' playlist_record.json | head -1). Stream now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats"
+            echo "Metadata found in playlist_record.json"
           else
             echo "has_metadata=false" >> $GITHUB_OUTPUT
-            echo "Tweet message without metadata: 🎶 Afrobeats On Rotation Spotify Playlist just got updated on $(date +%Y-%m-%d)! 🔥 Stream now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats"
+            echo "No metadata found in playlist_record.json"
           fi
 
-      - name: Post to Twitter with metadata
-        id: twitter-post
-        if: steps.check-metadata.outputs.has_metadata == 'true' && success()
-        continue-on-error: true
-        uses: noweh/post-tweet-v2-action@v1.0
-        with:
-          message: |
-            🎶 Afrobeats On Rotation Spotify Playlist just got updated on $(date +%Y-%m-%d)! 🔥 Top track: $(jq -r '.[] | select(.track != null) | .track.name' playlist_record.json | head -1) by $(jq -r '.[] | select(.track != null) | .track.artists[0].name' playlist_record.json | head -1). Stream now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats
-          consumer-key: ${{ secrets.TWITTER_API_KEY }}
-          consumer-secret: ${{ secrets.TWITTER_API_SECRET }}
-          access-token: ${{ secrets.TWITTER_ACCESS_TOKEN }}
-          access-token-secret: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+      - name: Generate random tweet
+        id: generate-tweet
+        run: |
+          RANDOM_SUFFIX=$(date +%s | sha256sum | head -c 8)
+          TWEET_TEMPLATES=(
+            "🎶 Fresh Afrobeats On Rotation update for $(date +%Y-%m-%d)! 🔥 Top track: {track_name} by {artist_name}. Stream now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats #Vibe [$RANDOM_SUFFIX]"
+            "🕺 New AfroVibes on $(date +%Y-%m-%d)! 🎵 Kicking off with {track_name} by {artist_name}. Tune in: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #AfroFusion #Music [$RANDOM_SUFFIX]"
+            "🔥 Afrobeats On Rotation just dropped new tracks on $(date +%Y-%m-%d)! Leading with {track_name} by {artist_name}. Listen now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats #Playlist [$RANDOM_SUFFIX]"
+            "🎉 Updated Afrobeats playlist on $(date +%Y-%m-%d)! Start with {track_name} by {artist_name}. Get grooving: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #AfroVibes #Spotify [$RANDOM_SUFFIX]"
+            "💃 Afrobeats On Rotation refreshed on $(date +%Y-%m-%d)! Top pick: {track_name} by {artist_name}. Stream it: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats #NewMusic [$RANDOM_SUFFIX]"
+          )
+          FALLBACK_TWEETS=(
+            "🎶 Afrobeats On Rotation updated on $(date +%Y-%m-%d)! 🔥 Stream the latest vibes: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats [$RANDOM_SUFFIX]"
+            "🕺 New AfroVibes alert for $(date +%Y-%m-%d)! 🎵 Tune in now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #AfroFusion [$RANDOM_SUFFIX]"
+            "🔥 Fresh Afrobeats playlist drop on $(date +%Y-%m-%d)! Get listening: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats #Music [$RANDOM_SUFFIX]"
+          )
+          if [ "${{ steps.check-metadata.outputs.has_metadata }}" == "true" ]; then
+            TRACK_NAME=$(jq -r '.[] | select(.track != null) | .track.name' playlist_record.json | head -1)
+            ARTIST_NAME=$(jq -r '.[] | select(.track != null) | .track.artists[0].name' playlist_record.json | head -1)
+            TEMPLATE=$(printf "%s\n" "${TWEET_TEMPLATES[@]}" | shuf -n 1)
+            TWEET_MESSAGE=$(echo "$TEMPLATE" | sed "s/{track_name}/$TRACK_NAME/" | sed "s/{artist_name}/$ARTIST_NAME/")
+          else
+            TWEET_MESSAGE=$(printf "%s\n" "${FALLBACK_TWEETS[@]}" | shuf -n 1)
+          fi
+          echo "Tweet message: $TWEET_MESSAGE"
+          echo "tweet_message=$TWEET_MESSAGE" >> $GITHUB_OUTPUT
 
-      - name: Post to Twitter without metadata
-        id: twitter-post-fallback
-        if: steps.check-metadata.outputs.has_metadata == 'false' && success()
+      - name: Post to Twitter
+        id: twitter-post
         continue-on-error: true
         uses: noweh/post-tweet-v2-action@v1.0
         with:
-          message: |
-            🎶 Afrobeats On Rotation Spotify Playlist just got updated on $(date +%Y-%m-%d)! 🔥 Stream now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats
+          message: ${{ steps.generate-tweet.outputs.tweet_message }}
           consumer-key: ${{ secrets.TWITTER_API_KEY }}
           consumer-secret: ${{ secrets.TWITTER_API_SECRET }}
           access-token: ${{ secrets.TWITTER_ACCESS_TOKEN }}
           access-token-secret: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
 
       - name: Log Twitter Post Failure
-        if: steps.twitter-post.outcome == 'failure' || steps.twitter-post-fallback.outcome == 'failure'
+        if: steps.twitter-post.outcome == 'failure'
         run: |
           echo "Twitter post failed."
+          echo "Tweet attempted: ${{ steps.generate-tweet.outputs.tweet_message }}"
           echo "Check Twitter app permissions, OAuth tokens, and account status (@your_handle)."
           echo "Ensure TWITTER_API_KEY, TWITTER_API_SECRET, TWITTER_ACCESS_TOKEN, and TWITTER_ACCESS_TOKEN_SECRET are valid in GitHub Secrets."
           echo "Verify account is not suspended or restricted at twitter.com."
