@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15 # Prevent hanging
     environment: production # Specify the environment
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -60,11 +61,22 @@ jobs:
         run: |
           curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage \
             -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
-            -d text="🎶 *Afrobeats on Rotation* Spotify playlist just got updated! 🔥Click below to stream trending music now:👉 https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8" \
+            -d text="🎶 *Afrobeats on Rotation* Spotify playlist just got updated! 🔥\n\nClick below to stream trending music now:\n👉 https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8" \
             -d parse_mode=Markdown
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      - name: Tweet Playlist Update
+        if: always()
+        uses: ethomson/send-tweet@v1
+        with:
+          status: "🎧 The *Afrobeats on Rotation* playlist is freshly updated! 🔥 Stream: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats #SpotifyPlaylist"
+        env:
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
 
       - name: Upload logs
         if: always()
