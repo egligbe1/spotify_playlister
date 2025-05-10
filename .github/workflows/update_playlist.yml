@@ -11,9 +11,8 @@ permissions:
 jobs:
   update-playlist:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment: production
-
+    timeout-minutes: 15 # Prevent hanging
+    environment: production # Specify the environment
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -36,24 +35,15 @@ jobs:
           SOURCE_PLAYLIST: ${{ vars.SOURCE_PLAYLIST }}
           TARGET_PLAYLIST: ${{ vars.TARGET_PLAYLIST }}
           PLAYLIST_DESCRIPTION: ${{ vars.PLAYLIST_DESCRIPTION }}
-        run: |
-          python main.py
-          if [ $? -ne 0 ]; then
-            echo "Playlist updater script failed." >&2
-            exit 1
-          fi
+        run: python main.py || exit 1
 
       - name: Debug file presence
         run: |
           echo "Directory contents:"
           ls -la
-          for file in last_update.json playlist_record.json priority_songs.json; do
-            if [ -f "$file" ]; then
-              echo "$file exists"
-            else
-              echo "$file not found"
-            fi
-          done
+          if [ -f last_update.json ]; then echo "last_update.json exists"; else echo "last_update.json not found"; fi
+          if [ -f playlist_record.json ]; then echo "playlist_record.json exists"; else echo "playlist_record.json not found"; fi
+          if [ -f priority_songs.json ]; then echo "priority_songs.json exists"; else echo "priority_songs.json not found"; fi
 
       - name: Commit updated files
         run: |
@@ -72,38 +62,23 @@ jobs:
             -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
             -d text="🎶 *Afrobeats on Rotation* Spotify playlist just got updated! 🔥\n\nClick below to stream trending music now:\n👉 https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8" \
             -d parse_mode=Markdown
-
-      - name: Tweet Playlist Update
-        if: always()
-        run: |
-          python - <<EOF
-import os
-import tweepy
-
-auth = tweepy.OAuth1UserHandler(
-    os.environ["TWITTER_API_KEY"],
-    os.environ["TWITTER_API_SECRET"],
-    os.environ["TWITTER_ACCESS_TOKEN"],
-    os.environ["TWITTER_ACCESS_TOKEN_SECRET"]
-)
-api = tweepy.API(auth)
-
-tweet = (
-    "🎧 The *Afrobeats on Rotation* playlist is freshly updated! 🔥\\n"
-    "Stream: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 "
-    "#Afrobeats #SpotifyPlaylist"
-)
-api.update_status(tweet)
-EOF
         env:
-          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
-          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
-          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
-          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      - name: Post to Twitter
+        if: success()
+        uses: noweh/post-tweet-v2-action@v1
+        with:
+          message: "🎶Afrobeats On Rotation just got updated with Fresh Afrobeats & Afro-fusion on Spotify! 🔥 Stream now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats"
+          consumer-key: ${{ secrets.TWITTER_CONSUMER_API_KEY }}
+          consumer-secret: ${{ secrets.TWITTER_CONSUMER_API_SECRET }}
+          access-token: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          access-token-secret: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
 
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: updater-logs
-          path: updater.log || echo "Log file not found, skipping upload."
+          path: updater.log
