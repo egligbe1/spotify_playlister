@@ -74,14 +74,20 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Post to Twitter
+        id: twitter-post
         if: success()
+        continue-on-error: true
         uses: noweh/post-tweet-v2-action@v1.0
         with:
-          message: "🎶 Our Spotify Playlist just got updated with fresh Afrobeats & Afro-fusion hits. Stream now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats"
+          message: "🎶 Our Spotify Playlist updated with fresh Afrobeats & Afro-fusion hits on $(date +%Y-%m-%d)! Stream now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats"
           consumer-key: ${{ secrets.TWITTER_API_KEY }}
           consumer-secret: ${{ secrets.TWITTER_API_SECRET }}
           access-token: ${{ secrets.TWITTER_ACCESS_TOKEN }}
           access-token-secret: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+
+      - name: Log Twitter Post Failure
+        if: steps.twitter-post.outcome == 'failure'
+        run: echo "Twitter post failed, likely due to duplicate content or other API restrictions"
 
       - name: Upload logs
         if: always()
