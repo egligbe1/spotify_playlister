@@ -69,9 +69,26 @@ jobs:
 
       - name: Tweet Playlist Update
         if: always()
-        uses: ethomson/send-tweet@v1
-        with:
-          status: "🎧 The *Afrobeats on Rotation* playlist is freshly updated! 🔥 Stream: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats #SpotifyPlaylist"
+        run: |
+          python - <<EOF
+import os
+import tweepy
+
+auth = tweepy.OAuth1UserHandler(
+    os.environ["TWITTER_API_KEY"],
+    os.environ["TWITTER_API_SECRET"],
+    os.environ["TWITTER_ACCESS_TOKEN"],
+    os.environ["TWITTER_ACCESS_TOKEN_SECRET"]
+)
+api = tweepy.API(auth)
+
+tweet = (
+    "🎧 The *Afrobeats on Rotation* playlist is freshly updated! 🔥\\n"
+    "Stream: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 "
+    "#Afrobeats #SpotifyPlaylist"
+)
+api.update_status(tweet)
+EOF
         env:
           TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
           TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
