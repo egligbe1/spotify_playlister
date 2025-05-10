@@ -73,13 +73,17 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
       - name: Post to Twitter
         id: twitter-post
         if: success()
         continue-on-error: true
         uses: noweh/post-tweet-v2-action@v1.0
         with:
-          message: "🎶 Our Spotify Playlist updated with fresh Afrobeats & Afro-fusion hits on $(date +%Y-%m-%d)! Stream now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats"
+          message: |
+            🎶 Afrobeats On Rotation Spotify Playlist just got updated on $(date +%Y-%m-%d)! 🔥 Top track: $(jq -r '.[] | select(.track != null) | .track.name' playlist_record.json | head -1) by $(jq -r '.[] | select(.track != null) | .track.artists[0].name' playlist_record.json | head -1). Stream now: https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8 #Afrobeats
           consumer-key: ${{ secrets.TWITTER_API_KEY }}
           consumer-secret: ${{ secrets.TWITTER_API_SECRET }}
           access-token: ${{ secrets.TWITTER_ACCESS_TOKEN }}
@@ -87,7 +91,7 @@ jobs:
 
       - name: Log Twitter Post Failure
         if: steps.twitter-post.outcome == 'failure'
-        run: echo "Twitter post failed, likely due to duplicate content or other API restrictions"
+        run: echo "Twitter post failed, likely due to duplicate content or missing metadata in playlist_record.json"
 
       - name: Upload logs
         if: always()
