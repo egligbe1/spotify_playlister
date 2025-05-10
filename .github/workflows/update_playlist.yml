@@ -2,20 +2,22 @@ name: Update Spotify Playlist
 
 on:
   schedule:
-    - cron: '0 0 * * 6'
-  workflow_dispatch:
+    - cron: "0 0 * * 6" # Runs every Saturday at 00:00 UTC
+  workflow_dispatch: # Allows manual triggering
 
 jobs:
   update-playlist:
     runs-on: ubuntu-latest
+    timeout-minutes: 15 # Prevent hanging
+    environment: production # Specify the environment
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4  # Updated to v4 for consistency
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: "3.9"
 
       - name: Install dependencies
         run: |
@@ -32,9 +34,26 @@ jobs:
           PLAYLIST_DESCRIPTION: ${{ vars.PLAYLIST_DESCRIPTION }}
         run: python main.py
 
+      - name: Debug file presence
+        run: |
+          ls -la
+          if [ -f last_update.json ]; then echo "last_update.json exists"; else echo "last_update.json not found"; fi
+          if [ -f playlist_record.json ]; then echo "playlist_record.json exists"; else echo "playlist_record.json not found"; fi
+          if [ -f priority_songs.json ]; then echo "priority_songs.json exists"; else echo "priority_songs.json not found"; fi
+
+      - name: Commit updated files
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add last_update.json playlist_record.json priority_songs.json || echo "No files to add"
+          git commit -m "Update last_update.json, playlist_record.json, and priority_songs.json after playlist update" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v4  # Updated to v4
+        uses: actions/upload-artifact@v4
         with:
           name: updater-logs
           path: updater.log

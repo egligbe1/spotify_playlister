@@ -13,11 +13,11 @@ import base64
 from time import sleep
 import random
 
-# Load environment variables (from .env locally, GitHub Secrets in cloud)
+# Load environment variables (from .env locally, GitHub Secrets/Vars in cloud)
 load_dotenv()
 
 # Set up logging
-logging.basicConfig(filename='updater.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(filename='updater.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logging.info("Starting Spotify playlist updater")
 
 # Constants
@@ -25,6 +25,8 @@ SCOPE = 'playlist-modify-public playlist-modify-private playlist-read-private ug
 REDIRECT_URI = 'http://localhost:8888/callback'
 TOKEN_FILE = 'token_info.json'
 RECORD_FILE = 'playlist_record.json'
+LAST_UPDATE_FILE = 'last_update.json'
+PRIORITY_SONGS_FILE = 'priority_songs.json'
 MAX_RETRIES = 3
 TIMEOUT = 30
 MAX_SONGS = 70
@@ -35,22 +37,62 @@ def load_record():
         with open(RECORD_FILE, 'r') as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
+        logging.info(f"No {RECORD_FILE} found. Initializing empty record.")
         return []
 
 # Save playlist record
 def save_record(record):
-    with open(RECORD_FILE, 'w') as f:
-        json.dump(record, f)
+    try:
+        with open(RECORD_FILE, 'w') as f:
+            json.dump(record, f)
+        logging.debug(f"Saved playlist record to {RECORD_FILE}")
+    except Exception as e:
+        logging.error(f"Failed to save playlist record: {e}")
+
+# Load last update date
+def load_last_update():
+    try:
+        with open(LAST_UPDATE_FILE, 'r') as f:
+            data = json.load(f)
+            date = datetime.datetime.fromisoformat(data['last_update']).date()
+            logging.debug(f"Loaded last update date: {date}")
+            return date
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
+        logging.info(f"No {LAST_UPDATE_FILE} found. Assuming first update.")
+        return None
+
+# Save last update date
+def save_last_update(update_date):
+    try:
+        with open(LAST_UPDATE_FILE, 'w') as f:
+            json.dump({'last_update': update_date.isoformat()}, f)
+        logging.debug(f"Saved last update date to {LAST_UPDATE_FILE}")
+    except Exception as e:
+        logging.error(f"Failed to save last update date: {e}")
+
+# Load priority songs
+def load_priority_songs():
+    try:
+        with open(PRIORITY_SONGS_FILE, 'r') as f:
+            data = json.load(f)
+            songs = data.get('priority_songs', [])
+            logging.debug(f"Loaded {len(songs)} priority songs: {songs}")
+            return songs
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
+        logging.info(f"No {PRIORITY_SONGS_FILE} found. No priority songs.")
+        return []
 
 # Check internet connection
 def is_connected():
     for attempt in range(MAX_RETRIES):
         try:
             requests.get('https://www.google.com', timeout=TIMEOUT)
+            logging.debug("Internet connection verified")
             return True
         except requests.ConnectionError:
+            logging.warning(f"Internet connection attempt {attempt + 1} failed")
             sleep(2)
-    logging.error("No internet connection.")
+    logging.error("No internet connection after retries")
     return False
 
 # Get Spotify client
@@ -58,7 +100,7 @@ def get_spotify_client():
     client_id = os.getenv('SPOTIFY_CLIENT_ID')
     client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
     username = os.getenv('SPOTIFY_USERNAME')
-    logging.info("Spotify credentials loaded from environment")
+    logging.debug(f"Loaded environment: client_id={bool(client_id)}, client_secret={bool(client_secret)}, username={bool(username)}")
     if not all([client_id, client_secret, username]):
         logging.error("Missing required variables: SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, or SPOTIFY_USERNAME")
         return None
@@ -78,9 +120,18 @@ def get_spotify_client():
             if auth_manager.is_token_expired(token_info):
                 auth_manager.refresh_access_token(token_info['refresh_token'])
                 logging.info("Token refreshed")
-            return spotipy.Spotify(auth_manager=auth_manager)
+            sp = spotipy.Spotify(auth_manager=auth_manager)
+            # Verify token scopes
+            current_user = sp.current_user()
+            token_scopes = auth_manager.scope.split()
+            required_scopes = SCOPE.split()
+            if not all(scope in token_scopes for scope in required_scopes):
+                logging.error(f"Token missing required scopes. Has: {token_scopes}, Needs: {required_scopes}")
+                return None
+            logging.debug(f"Token scopes verified: {token_scopes}")
+            return sp
         except Exception as e:
-            logging.error(f"Token refresh failed: {e}")
+            logging.error(f"Token refresh or validation failed: {e}")
             return None
     else:
         logging.error("No token_info.json found. Run locally with --initial_setup first.")
@@ -88,21 +139,44 @@ def get_spotify_client():
 
 # Update playlist metadata
 def update_playlist_metadata(sp, target_playlist):
+    # Update description
+    for attempt in range(MAX_RETRIES):
+        try:
+            results = sp.playlist_tracks(target_playlist, limit=1)
+            logging.debug(f"Playlist tracks API response: {len(results['items'])} items")
+            if not results['items']:
+                logging.warning("No tracks in target playlist")
+                return
+            
+            first_track = results['items'][0]['track']
+            artist_name = first_track['artists'][0]['name'] if first_track['artists'] else "Unknown Artist"
+            logging.info(f"Extracted artist name: {artist_name}")
+
+            description_template = os.getenv('PLAYLIST_DESCRIPTION')
+            if not description_template or '{}' not in description_template:
+                logging.error("Invalid or missing PLAYLIST_DESCRIPTION")
+                return
+            logging.debug(f"Description template: {description_template}")
+
+            description = description_template.format(artist_name)
+            sp.playlist_change_details(target_playlist, description=description)
+            logging.info(f"Updated description to: {description}")
+            break
+        except Exception as e:
+            logging.error(f"Description update attempt {attempt + 1} failed: {e}")
+            if attempt < MAX_RETRIES - 1:
+                sleep(2)
+            else:
+                logging.error("Max retries reached for description update")
+                return
+
+    # Update cover image
     try:
         results = sp.playlist_tracks(target_playlist, limit=1)
         if not results['items']:
-            logging.warning("No tracks in target playlist")
             return
         
-        first_track = results['items'][0]['track']
-        artist_name = first_track['artists'][0]['name']
-        album_images = first_track['album']['images']
-
-        description_template = os.getenv('PLAYLIST_DESCRIPTION')
-        description = description_template.format(artist_name)
-        sp.playlist_change_details(target_playlist, description=description)
-        logging.info(f"Updated description to: {description}")
-
+        album_images = results['items'][0]['track']['album']['images']
         if album_images:
             image_url = album_images[0]['url']
             response = requests.get(image_url, timeout=TIMEOUT)
@@ -113,13 +187,21 @@ def update_playlist_metadata(sp, target_playlist):
             sp.playlist_upload_cover_image(target_playlist, base64_image)
             logging.info("Cover image updated")
     except Exception as e:
-        logging.error(f"Metadata update failed: {e}")
+        logging.error(f"Cover image update failed: {e}")
 
 # Main playlist update logic
 def update_playlist():
-    now = datetime.datetime.now()
-    if now.weekday() != 5 or now.hour != 0 or now.minute > 5:
-        logging.info(f"Not scheduled time. Current time: {now} UTC. Expected: Saturday 00:00-00:05 UTC")
+    now = datetime.datetime.now(datetime.timezone.utc)
+    logging.debug(f"Current time: {now} UTC")
+    if now.weekday() != 5:
+        logging.info(f"Not Saturday. Expected: Any time on Saturday")
+        return
+
+    # Check if already updated this Saturday
+    current_date = now.date()
+    last_update_date = load_last_update()
+    if last_update_date and last_update_date == current_date:
+        logging.info(f"Playlist already updated on {current_date}. Skipping.")
         return
 
     if not is_connected():
@@ -128,16 +210,22 @@ def update_playlist():
     
     sp = get_spotify_client()
     if not sp:
+        logging.error("Spotify client initialization failed")
         return
 
     source_playlist = os.getenv('SOURCE_PLAYLIST')
     target_playlist = os.getenv('TARGET_PLAYLIST')
     username = os.getenv('SPOTIFY_USERNAME')
-    if not all([source_playlist, target_playlist]):
-        logging.error("Missing SOURCE_PLAYLIST or TARGET_PLAYLIST in environment")
+    logging.debug(f"Environment: source_playlist={source_playlist}, target_playlist={target_playlist}, username={username}")
+    if not all([source_playlist, target_playlist, username]):
+        logging.error("Missing SOURCE_PLAYLIST, TARGET_PLAYLIST, or SPOTIFY_USERNAME")
         return
 
     try:
+        # Load priority songs
+        priority_songs = load_priority_songs()
+        logging.info(f"Priority songs to include: {len(priority_songs)}")
+
         # Fetch current tracks in the target playlist
         current_tracks = []
         results = sp.playlist_tracks(target_playlist)
@@ -153,29 +241,36 @@ def update_playlist():
         new_songs = [song for song in source_songs if song not in current_tracks]
         logging.info(f"Found {len(new_songs)} new tracks from source playlist")
 
-        # Combine all tracks (existing + new) and shuffle
-        all_tracks = current_tracks + new_songs
+        # Combine tracks: priority songs + other tracks (current + new)
+        other_tracks = current_tracks + new_songs
+        all_tracks = priority_songs + other_tracks
         random.shuffle(all_tracks)
-        logging.info(f"Shuffled all {len(all_tracks)} tracks (existing + new)")
+        logging.info(f"Shuffled all {len(all_tracks)} tracks (including {len(priority_songs)} priority songs)")
 
         # Clear the target playlist
         if current_tracks:
             sp.user_playlist_remove_all_occurrences_of_tracks(username, target_playlist, current_tracks)
             logging.info("Cleared all existing tracks from target playlist")
 
-        # Trim to MAX_SONGS if necessary and add shuffled tracks
+        # Trim to MAX_SONGS if necessary, preserving priority songs
         if len(all_tracks) > MAX_SONGS:
-            all_tracks = all_tracks[:MAX_SONGS]
-            logging.info(f"Trimmed to {MAX_SONGS} tracks from {len(all_tracks) + len(new_songs)} total")
-
+            num_priority = len(priority_songs)
+            if num_priority > MAX_SONGS:
+                logging.warning(f"Priority songs ({num_priority}) exceed MAX_SONGS ({MAX_SONGS}). Trimming priority songs.")
+                all_tracks = all_tracks[:MAX_SONGS]
+            else:
+                num_to_keep = MAX_SONGS - num_priority
+                all_tracks = priority_songs + other_tracks[:num_to_keep]
+                logging.info(f"Trimmed to {MAX_SONGS} tracks: {num_priority} priority + {num_to_keep} others")
         sp.user_playlist_add_tracks(username, target_playlist, all_tracks)
-        logging.info(f"Added {len(all_tracks)} shuffled tracks to target playlist")
+        logging.info(f"Added {len(all_tracks)} tracks to target playlist")
 
         # Update metadata
         update_playlist_metadata(sp, target_playlist)
 
-        # Save the current track IDs
+        # Save the current track IDs and update date
         save_record(all_tracks)
+        save_last_update(current_date)
         logging.info("Playlist update completed")
     except Exception as e:
         logging.error(f"Update failed: {e}")
