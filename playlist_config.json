@@ -112,7 +112,52 @@
       "description_template": "Afro House mix with {} and more!",
       "max_songs": 80,
       "update_schedule": "saturday"
+    },
+    {
+      "name": "FUTURE BASS 2025",
+      "target_playlist_id": "01aCl2C1PyekZ2pGeyKfzN",
+      "source_playlists": [
+        "5mZaNT0CzJWHrWuE3xRopB"
+      ],
+      "priority_songs": [],
+      "description_template": "Future Bass music for you to enjoy!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "TRANCE MUSIC 2025",
+      "target_playlist_id": "2ypN3O58dpvp9RgA2LG90Z",
+      "source_playlists": [
+        "0Q3ugz23LAXFg2PvXJ8hMx"
+      ],
+      "priority_songs": [],
+      "description_template": "Trance music for you to enjoy!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "EDM TECHNO 2025",
+      "target_playlist_id": "7glsMaaTFfDvLbLtnGXXAC",
+      "source_playlists": [
+        "3oEXfT2t2EZFSHxmRIL4A0"
+      ],
+      "priority_songs": [],
+      "description_template": "EDM Techno music for you to enjoy!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "EDM PARTY 2025",
+      "target_playlist_id": "2Zs0uVWbaVFPSYFrTrv2Ms",
+      "source_playlists": [
+        "5PCv6afEatU3z9cq2fBPDs"
+      ],
+      "priority_songs": [],
+      "description_template": "EDM party mix with {} and more!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
     }
+
   ],
   "global_settings": {
     "update_day": "saturday",
