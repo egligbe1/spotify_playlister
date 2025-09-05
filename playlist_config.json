@@ -97,7 +97,9 @@
       "source_playlists": [
         "4t5QcqXgA5gmtomjxt774E"
       ],
-      "priority_songs": [],
+      "priority_songs": [
+        "3RcnE81xkgBr7av1elOLV8"
+      ],
       "description_template": "Top Hits in Ghana with {} and more!",
       "max_songs": 80,
       "update_schedule": "saturday"

@@ -352,37 +352,31 @@ class MultiPlaylistManager:
             # Fetch current tracks in target playlist
             current_tracks = self.fetch_current_playlist_tracks(target_playlist)
             
-            # Find new tracks
-            new_tracks = [track for track in source_tracks if track not in current_tracks]
-            logger.info(f"Found {len(new_tracks)} new tracks for {playlist_name}")
+            # Add priority songs to source tracks (they should always be included)
+            all_source_tracks = list(dict.fromkeys(priority_songs + source_tracks))
             
-            # Combine all tracks (priority + current + new)
-            all_tracks = priority_songs + current_tracks + new_tracks
-            original_count = len(all_tracks)
-            all_tracks = list(dict.fromkeys(all_tracks))  # Remove duplicates
-            duplicates_removed = original_count - len(all_tracks)
-            logger.info(f"Combined {original_count} tracks, removed {duplicates_removed} duplicates")
+            # Find tracks to remove (in target but not in source)
+            tracks_to_remove = [track for track in current_tracks if track not in all_source_tracks]
             
-            # Fetch metadata for all tracks
-            track_data = self.fetch_track_metadata(all_tracks)
+            # Find tracks to add (in source but not in target)
+            tracks_to_add = [track for track in all_source_tracks if track not in current_tracks]
             
-            # Shuffle and trim to max_songs
-            random.shuffle(all_tracks)
-            if len(all_tracks) > max_songs:
-                all_tracks = all_tracks[:max_songs]
-                track_data = [item for item in track_data if item['track']['id'] in all_tracks]
-                logger.info(f"Trimmed to {max_songs} tracks")
+            # Find tracks to keep (in both source and target)
+            tracks_to_keep = [track for track in current_tracks if track in all_source_tracks]
             
-            # Clear existing tracks in batches to avoid "Too many ids requested"
-            max_retries = self.config['global_settings']['max_retries']
-            if current_tracks:
+            # Log detailed sync summary
+            self.log_sync_summary(playlist_config, source_tracks, current_tracks, tracks_to_remove, tracks_to_add, tracks_to_keep)
+            
+            # Remove tracks that are in target but not in source
+            if tracks_to_remove:
                 username = os.getenv('SPOTIFY_USERNAME')
-                for i in range(0, len(current_tracks), 100):  # Batch removal
-                    batch = current_tracks[i:i + 100]
+                max_retries = self.config['global_settings']['max_retries']
+                for i in range(0, len(tracks_to_remove), 100):  # Batch removal
+                    batch = tracks_to_remove[i:i + 100]
                     for attempt in range(max_retries):
                         try:
                             self.sp.user_playlist_remove_all_occurrences_of_tracks(username, target_playlist, batch)
-                            logger.info(f"Cleared {len(batch)} existing tracks from {playlist_name} (batch {i//100 + 1})")
+                            logger.info(f"Removed {len(batch)} tracks from {playlist_name} (batch {i//100 + 1})")
                             break
                         except spotipy.exceptions.SpotifyException as e:
                             if e.http_status == 429:
@@ -396,35 +390,87 @@ class MultiPlaylistManager:
                             logger.error(f"Unexpected error removing tracks from {playlist_name} (batch {i//100 + 1}): {e}")
                             break
             
-            # Add new tracks in batches
-            username = os.getenv('SPOTIFY_USERNAME')
-            for i in range(0, len(all_tracks), 100):
-                batch = all_tracks[i:i + 100]
-                for attempt in range(max_retries):
-                    try:
-                        self.sp.user_playlist_add_tracks(username, target_playlist, batch)
-                        logger.info(f"Added {len(batch)} tracks to {playlist_name} (batch {i//100 + 1})")
-                        break
-                    except spotipy.exceptions.SpotifyException as e:
-                        if e.http_status == 429:
-                            sleep_time = 2 ** attempt
-                            logger.warning(f"Rate limit hit for adding tracks (batch {i//100 + 1}). Retrying in {sleep_time} seconds...")
-                            sleep(sleep_time)
-                        else:
-                            logger.error(f"Failed to add tracks to {playlist_name} (batch {i//100 + 1}): {e}")
+            # Add tracks that are in source but not in target
+            if tracks_to_add:
+                username = os.getenv('SPOTIFY_USERNAME')
+                max_retries = self.config['global_settings']['max_retries']
+                for i in range(0, len(tracks_to_add), 100):  # Batch addition
+                    batch = tracks_to_add[i:i + 100]
+                    for attempt in range(max_retries):
+                        try:
+                            self.sp.user_playlist_add_tracks(username, target_playlist, batch)
+                            logger.info(f"Added {len(batch)} tracks to {playlist_name} (batch {i//100 + 1})")
                             break
-                    except Exception as e:
-                        logger.error(f"Unexpected error adding tracks to {playlist_name} (batch {i//100 + 1}): {e}")
-                        break
+                        except spotipy.exceptions.SpotifyException as e:
+                            if e.http_status == 429:
+                                sleep_time = 2 ** attempt
+                                logger.warning(f"Rate limit hit for adding tracks (batch {i//100 + 1}). Retrying in {sleep_time} seconds...")
+                                sleep(sleep_time)
+                            else:
+                                logger.error(f"Failed to add tracks to {playlist_name} (batch {i//100 + 1}): {e}")
+                                break
+                        except Exception as e:
+                            logger.error(f"Unexpected error adding tracks to {playlist_name} (batch {i//100 + 1}): {e}")
+                            break
             
-            # Confirm tracks are added before updating metadata
-            logger.info(f"Playlist {playlist_name} populated with {len(all_tracks)} tracks")
+            # Calculate final track count
+            final_track_count = len(tracks_to_keep) + len(tracks_to_add)
+            logger.info(f"Final track count for {playlist_name}: {final_track_count}")
+            
+            # If we exceed max_songs, trim without re-adding to preserve "date added"
+            if final_track_count > max_songs:
+                # Get the current state after additions/removals in existing order
+                current_final_tracks = self.fetch_current_playlist_tracks(target_playlist)
+
+                # Determine which tracks to keep, prioritizing priority songs, but do not reorder
+                # Keep priority songs first (in their current order), then fill remaining slots with non-priority tracks in current order
+                priority_tracks_in_playlist = [track for track in current_final_tracks if track in priority_songs]
+                non_priority_tracks_in_playlist = [track for track in current_final_tracks if track not in priority_songs]
+
+                available_slots_after_priority = max_songs - len(priority_tracks_in_playlist)
+                if available_slots_after_priority < 0:
+                    # More priority tracks than max_songs: keep only the first max_songs priority tracks (existing order)
+                    tracks_to_keep_final = priority_tracks_in_playlist[:max_songs]
+                else:
+                    tracks_to_keep_final = priority_tracks_in_playlist + non_priority_tracks_in_playlist[:available_slots_after_priority]
+
+                # Remove only the surplus tracks; do not re-add or reorder remaining tracks
+                tracks_to_remove_final = [track for track in current_final_tracks if track not in tracks_to_keep_final]
+
+                if tracks_to_remove_final:
+                    username = os.getenv('SPOTIFY_USERNAME')
+                    max_retries = self.config['global_settings']['max_retries']
+                    for i in range(0, len(tracks_to_remove_final), 100):
+                        batch = tracks_to_remove_final[i:i + 100]
+                        for attempt in range(max_retries):
+                            try:
+                                self.sp.user_playlist_remove_all_occurrences_of_tracks(username, target_playlist, batch)
+                                logger.info(f"Trimmed {len(batch)} surplus tracks from {playlist_name} (batch {i//100 + 1})")
+                                break
+                            except spotipy.exceptions.SpotifyException as e:
+                                if e.http_status == 429:
+                                    sleep_time = 2 ** attempt
+                                    logger.warning(f"Rate limit hit while trimming (batch {i//100 + 1}). Retrying in {sleep_time} seconds...")
+                                    sleep(sleep_time)
+                                else:
+                                    logger.error(f"Failed to trim tracks from {playlist_name} (batch {i//100 + 1}): {e}")
+                                    break
+                            except Exception as e:
+                                logger.error(f"Unexpected error trimming tracks from {playlist_name} (batch {i//100 + 1}): {e}")
+                                break
+
+                logger.info(f"Trimmed playlist {playlist_name} to {len(tracks_to_keep_final)} tracks (max: {max_songs}) without re-adding, preserving 'date added' for kept tracks")
+            
             # Wait for tracks to register before updating metadata
-            sleep(5)  # Increased delay
-            # Update metadata
-            self.update_playlist_metadata(target_playlist, all_tracks, description_template)
+            sleep(5)
+            
+            # Update metadata (only if there were changes)
+            if tracks_to_remove or tracks_to_add:
+                self.update_playlist_metadata(target_playlist, [], description_template)
             
             # Save records
+            final_tracks = self.fetch_current_playlist_tracks(target_playlist)
+            track_data = self.fetch_track_metadata(final_tracks)
             self.save_playlist_record(playlist_name, track_data)
             self.save_last_update(playlist_name, current_date)
             
@@ -458,6 +504,42 @@ class MultiPlaylistManager:
                 logger.error(f"Error updating {playlist_config['name']}: {e}")
         
         logger.info("Completed all playlist updates")
+
+    def get_sync_summary(self, playlist_config, source_tracks, current_tracks, tracks_to_remove, tracks_to_add, tracks_to_keep):
+        """Generate a detailed summary of the sync operation"""
+        playlist_name = playlist_config['name']
+        priority_songs = playlist_config['priority_songs']
+        
+        summary = f"\n=== SYNC SUMMARY FOR {playlist_name} ===\n"
+        summary += f"Source tracks: {len(source_tracks)}\n"
+        summary += f"Current tracks in target: {len(current_tracks)}\n"
+        summary += f"Priority songs: {len(priority_songs)}\n"
+        summary += f"Tracks to remove: {len(tracks_to_remove)}\n"
+        summary += f"Tracks to add: {len(tracks_to_add)}\n"
+        summary += f"Tracks to keep: {len(tracks_to_keep)}\n"
+        summary += f"Final track count: {len(tracks_to_keep) + len(tracks_to_add)}\n"
+        
+        if tracks_to_remove:
+            summary += f"\nTracks being removed:\n"
+            for track_id in tracks_to_remove[:5]:  # Show first 5
+                summary += f"  - {track_id}\n"
+            if len(tracks_to_remove) > 5:
+                summary += f"  ... and {len(tracks_to_remove) - 5} more\n"
+        
+        if tracks_to_add:
+            summary += f"\nTracks being added:\n"
+            for track_id in tracks_to_add[:5]:  # Show first 5
+                summary += f"  + {track_id}\n"
+            if len(tracks_to_add) > 5:
+                summary += f"  ... and {len(tracks_to_add) - 5} more\n"
+        
+        summary += "=" * 50 + "\n"
+        return summary
+
+    def log_sync_summary(self, playlist_config, source_tracks, current_tracks, tracks_to_remove, tracks_to_add, tracks_to_keep):
+        """Log a detailed summary of the sync operation"""
+        summary = self.get_sync_summary(playlist_config, source_tracks, current_tracks, tracks_to_remove, tracks_to_add, tracks_to_keep)
+        logger.info(summary)
 
 def main():
     """Main function to run the multi-playlist updater"""
