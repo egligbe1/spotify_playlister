@@ -243,10 +243,13 @@ class MultiPlaylistManager:
         contact_email = self.config['global_settings'].get('contact_email', 'default@example.com')
         market = os.getenv('SPOTIFY_MARKET', None)
         try:
-            # Get the top track for metadata updates
+            # Get the top track for metadata updates with improved retry logic
             top_track = None
             artist_name = "Unknown Artist"
             track_name = "Unknown Track"
+            
+            # Wait longer for playlist changes to propagate
+            sleep(10)
             
             for attempt in range(max_retries):
                 try:
@@ -255,11 +258,14 @@ class MultiPlaylistManager:
                         top_track = results['items'][0]['track']
                         artist_name = top_track['artists'][0]['name'] if top_track.get('artists') else "Unknown Artist"
                         track_name = top_track['name'] if top_track.get('name') else "Unknown Track"
-                        logger.debug(f"Top track for {target_playlist}: {track_name} by {artist_name}")
+                        logger.info(f"Top track for {target_playlist}: {track_name} by {artist_name}")
                         break
                     else:
                         logger.warning(f"No tracks found in playlist {target_playlist}")
-                    break
+                        # Wait and retry if no tracks found
+                        if attempt < max_retries - 1:
+                            sleep(5)
+                        break
                 except spotipy.exceptions.SpotifyException as e:
                     if e.http_status == 429:
                         sleep_time = 2 ** attempt
@@ -298,16 +304,22 @@ class MultiPlaylistManager:
                 album_images = top_track['album']['images']
                 if album_images:
                     image_url = album_images[0]['url']
+                    logger.info(f"Attempting to update cover image from: {image_url}")
                     for attempt in range(max_retries):
                         try:
                             response = requests.get(image_url, timeout=60)  # Increased timeout
-                            img = Image.open(io.BytesIO(response.content)).resize((640, 640), Image.Resampling.LANCZOS)
-                            img_byte_arr = io.BytesIO()
-                            img.convert('RGB').save(img_byte_arr, format='JPEG', quality=85)
-                            base64_image = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
-                            self.sp.playlist_upload_cover_image(target_playlist, base64_image)
-                            logger.info(f"Updated cover image for track: {track_name} by {artist_name}")
-                            break
+                            if response.status_code == 200:
+                                img = Image.open(io.BytesIO(response.content)).resize((640, 640), Image.Resampling.LANCZOS)
+                                img_byte_arr = io.BytesIO()
+                                img.convert('RGB').save(img_byte_arr, format='JPEG', quality=85)
+                                base64_image = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
+                                self.sp.playlist_upload_cover_image(target_playlist, base64_image)
+                                logger.info(f"Successfully updated cover image for track: {track_name} by {artist_name}")
+                                break
+                            else:
+                                logger.warning(f"Failed to download image: HTTP {response.status_code}")
+                                if attempt < max_retries - 1:
+                                    sleep(5)
                         except spotipy.exceptions.SpotifyException as e:
                             if e.http_status == 429:
                                 sleep_time = 2 ** attempt
@@ -318,6 +330,8 @@ class MultiPlaylistManager:
                                 break
                         except Exception as e:
                             logger.error(f"Unexpected error updating cover image for {target_playlist}: {e}")
+                            if attempt < max_retries - 1:
+                                sleep(5)
                             break
                 else:
                     logger.warning(f"No album images found for top track in {target_playlist}")
@@ -326,6 +340,67 @@ class MultiPlaylistManager:
                 
         except Exception as e:
             logger.error(f"Failed to update metadata for {target_playlist}: {e}")
+    
+    def reorder_playlist_random(self, target_playlist, priority_songs):
+        """Randomly reorder entire playlist while preserving 'added_at'.
+        Does not pin priority songs to the top; trimming logic elsewhere
+        ensures priority songs are not removed when enforcing max size.
+        Uses Spotify's reorder API to avoid remove+add, which would reset dates.
+        """
+        try:
+            # Build current order of track IDs
+            current_tracks = self.fetch_current_playlist_tracks(target_playlist)
+            if not current_tracks:
+                return
+            
+            # Shuffle all tracks uniformly (no priority pinning)
+            desired_order = list(current_tracks)
+            random.shuffle(desired_order)
+            
+            if desired_order == current_tracks:
+                logger.info("Reorder skipped: already in desired random order")
+                return
+            
+            max_retries = self.config['global_settings']['max_retries']
+            # Perform in-place transformation using Spotify reorder API
+            working = list(current_tracks)
+            for target_index, track_id in enumerate(desired_order):
+                if working[target_index] == track_id:
+                    continue
+                # Find current index of the track that should be at target_index
+                try:
+                    current_index = working.index(track_id)
+                except ValueError:
+                    # Should not happen; safety check
+                    continue
+                # Reorder: move the single item from current_index to target_index
+                for attempt in range(max_retries):
+                    try:
+                        # Spotify API: insert_before is the position the range will be inserted before
+                        self.sp.playlist_reorder_items(
+                            target_playlist,
+                            range_start=current_index,
+                            insert_before=target_index,
+                            range_length=1
+                        )
+                        # Reflect change locally
+                        item = working.pop(current_index)
+                        working.insert(target_index, item)
+                        break
+                    except spotipy.exceptions.SpotifyException as e:
+                        if e.http_status == 429:
+                            sleep_time = 2 ** attempt
+                            logger.warning(f"Rate limit hit while reordering. Retrying in {sleep_time} seconds...")
+                            sleep(sleep_time)
+                        else:
+                            logger.error(f"Failed to reorder item (HTTP {e.http_status}): {e}")
+                            break
+                    except Exception as e:
+                        logger.error(f"Unexpected error during reorder: {e}")
+                        break
+            logger.info("Completed random reorder while preserving 'added_at'")
+        except Exception as e:
+            logger.error(f"Failed to perform random reorder: {e}")
     
     def update_single_playlist(self, playlist_config):
         """Update a single playlist based on its configuration"""
@@ -342,7 +417,9 @@ class MultiPlaylistManager:
         current_date = datetime.datetime.now(datetime.timezone.utc).date()
         last_update = self.load_last_update(playlist_name)
         if last_update and last_update == current_date:
-            logger.info(f"{playlist_name} already updated today. Skipping.")
+            logger.info(f"{playlist_name} already updated today. Updating metadata only.")
+            # Still update metadata even if tracks are already current
+            self.update_playlist_metadata(target_playlist, [], description_template)
             return
         
         try:
@@ -461,12 +538,14 @@ class MultiPlaylistManager:
 
                 logger.info(f"Trimmed playlist {playlist_name} to {len(tracks_to_keep_final)} tracks (max: {max_songs}) without re-adding, preserving 'date added' for kept tracks")
             
-            # Wait for tracks to register before updating metadata
+            # Randomly reorder while preserving 'added_at'
+            self.reorder_playlist_random(target_playlist, priority_songs)
+            
+            # Wait for operations to register before updating metadata
             sleep(5)
             
-            # Update metadata (only if there were changes)
-            if tracks_to_remove or tracks_to_add:
-                self.update_playlist_metadata(target_playlist, [], description_template)
+            # Always update metadata to ensure cover and description are current
+            self.update_playlist_metadata(target_playlist, [], description_template)
             
             # Save records
             final_tracks = self.fetch_current_playlist_tracks(target_playlist)
@@ -504,6 +583,37 @@ class MultiPlaylistManager:
                 logger.error(f"Error updating {playlist_config['name']}: {e}")
         
         logger.info("Completed all playlist updates")
+    
+    def force_metadata_update_all(self):
+        """Force metadata update for all playlists without changing tracks"""
+        if not self.config:
+            logger.error("No configuration loaded")
+            return
+        
+        if not self.is_connected():
+            logger.error("No internet connection to Spotify API")
+            return
+        
+        self.sp = self.get_spotify_client()
+        if not self.sp:
+            logger.error("Failed to initialize Spotify client. Ensure token_info.json is set in GitHub Secrets as TOKEN_INFO_JSON.")
+            return
+        
+        logger.info(f"Force updating metadata for {len(self.config['playlists'])} playlists")
+        
+        for playlist_config in self.config['playlists']:
+            try:
+                playlist_name = playlist_config['name']
+                target_playlist = playlist_config['target_playlist_id']
+                description_template = playlist_config['description_template']
+                
+                logger.info(f"Force updating metadata for: {playlist_name}")
+                self.update_playlist_metadata(target_playlist, [], description_template)
+                sleep(2)
+            except Exception as e:
+                logger.error(f"Error force updating metadata for {playlist_config['name']}: {e}")
+        
+        logger.info("Completed force metadata updates for all playlists")
 
     def get_sync_summary(self, playlist_config, source_tracks, current_tracks, tracks_to_remove, tracks_to_add, tracks_to_keep):
         """Generate a detailed summary of the sync operation"""
@@ -543,8 +653,16 @@ class MultiPlaylistManager:
 
 def main():
     """Main function to run the multi-playlist updater"""
+    import sys
+    
     manager = MultiPlaylistManager()
-    manager.update_all_playlists()
+    
+    # Check if force metadata update is requested
+    if len(sys.argv) > 1 and sys.argv[1] == "--force-metadata":
+        logger.info("Force metadata update mode enabled")
+        manager.force_metadata_update_all()
+    else:
+        manager.update_all_playlists()
 
 if __name__ == "__main__":
     main()
