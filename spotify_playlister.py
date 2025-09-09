@@ -56,6 +56,28 @@ class MultiPlaylistManager:
             logger.error(f"Failed to load config: {e}")
             return None
     
+    def _hydrate_token_from_env_if_available(self):
+        """If TOKEN_INFO_JSON env var is present and no cache file exists, write it to disk."""
+        try:
+            if not Path(TOKEN_FILE).exists():
+                token_env = os.getenv('TOKEN_INFO_JSON')
+                if token_env:
+                    try:
+                        # Support both raw JSON and base64-encoded JSON
+                        try:
+                            parsed = json.loads(token_env)
+                        except json.JSONDecodeError:
+                            import base64 as _b64
+                            decoded = _b64.b64decode(token_env).decode('utf-8')
+                            parsed = json.loads(decoded)
+                        with open(TOKEN_FILE, 'w') as f:
+                            json.dump(parsed, f)
+                        logger.info("Hydrated token cache from TOKEN_INFO_JSON env var")
+                    except Exception as e:
+                        logger.error(f"Failed to parse TOKEN_INFO_JSON: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error hydrating token from env: {e}")
+    
     def get_spotify_client(self):
         """Get Spotify client with authentication"""
         client_id = os.getenv('SPOTIFY_CLIENT_ID')
@@ -65,6 +87,9 @@ class MultiPlaylistManager:
         if not all([client_id, client_secret, username]):
             logger.error("Missing required environment variables: SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, or SPOTIFY_USERNAME")
             return None
+
+        # Ensure token cache exists if provided via environment (e.g., CI/CD)
+        self._hydrate_token_from_env_if_available()
 
         auth_manager = SpotifyOAuth(
             client_id=client_id,
@@ -78,19 +103,45 @@ class MultiPlaylistManager:
         if Path(TOKEN_FILE).exists():
             try:
                 token_info = auth_manager.get_cached_token()
+                if not token_info:
+                    logger.error("Token cache exists but could not be read. Re-authentication required.")
+                    return None
+
                 if auth_manager.is_token_expired(token_info):
-                    auth_manager.refresh_access_token(token_info['refresh_token'])
-                    logger.info("Token refreshed")
+                    # Refresh with basic retry for transient network failures
+                    max_refresh_attempts = 3
+                    for attempt in range(max_refresh_attempts):
+                        try:
+                            auth_manager.refresh_access_token(token_info['refresh_token'])
+                            logger.info("Token refreshed")
+                            break
+                        except Exception as refresh_err:
+                            # Do not delete token on transient network errors
+                            err_text = str(refresh_err).lower()
+                            is_invalid_grant = 'invalid_grant' in err_text or '400' in err_text
+                            if is_invalid_grant:
+                                logger.error(f"Refresh failed due to invalid grant; cached token is no longer valid: {refresh_err}")
+                                try:
+                                    os.remove(TOKEN_FILE)
+                                    logger.info("Cleared invalid token. Re-authentication required.")
+                                except Exception:
+                                    pass
+                                return None
+                            if attempt < max_refresh_attempts - 1:
+                                backoff = 2 ** attempt
+                                logger.warning(f"Token refresh failed (attempt {attempt+1}/{max_refresh_attempts}). Retrying in {backoff}s...")
+                                sleep(backoff)
+                            else:
+                                logger.error(f"Token refresh failed after retries: {refresh_err}")
+                                return None
+
                 sp = spotipy.Spotify(auth_manager=auth_manager)
                 return sp
             except Exception as e:
-                logger.error(f"Token refresh failed: {e}")
-                if os.path.exists(TOKEN_FILE):
-                    os.remove(TOKEN_FILE)
-                    logger.info("Cleared invalid token. Re-authentication required.")
+                logger.error(f"Token handling failed: {e}")
                 return None
         else:
-            logger.error("No token_info.json found. Run the script locally to authenticate via Spotify OAuth and generate token_info.json, then add it to GitHub Secrets as TOKEN_INFO_JSON.")
+            logger.error("No token_info.json found. Run locally to authenticate via Spotify OAuth (opens a browser) to create token_info.json, or set TOKEN_INFO_JSON env var (raw JSON or base64). In CI, store it as a secret named TOKEN_INFO_JSON.")
             return None
     
     def is_connected(self):
@@ -342,9 +393,9 @@ class MultiPlaylistManager:
             logger.error(f"Failed to update metadata for {target_playlist}: {e}")
     
     def reorder_playlist_random(self, target_playlist, priority_songs):
-        """Randomly reorder entire playlist while preserving 'added_at'.
-        Does not pin priority songs to the top; trimming logic elsewhere
-        ensures priority songs are not removed when enforcing max size.
+        """Randomly reorder while preserving 'added_at', pinning priority songs to the top.
+        - Priority songs: kept at the top in their current relative order
+        - Non-priority songs: uniformly shuffled beneath priority block
         Uses Spotify's reorder API to avoid remove+add, which would reset dates.
         """
         try:
@@ -353,9 +404,13 @@ class MultiPlaylistManager:
             if not current_tracks:
                 return
             
-            # Shuffle all tracks uniformly (no priority pinning)
-            desired_order = list(current_tracks)
-            random.shuffle(desired_order)
+            # Compute desired order with priority block pinned to the top
+            priority_set = set(priority_songs)
+            priority_in_playlist = [t for t in current_tracks if t in priority_set]
+            non_priority_in_playlist = [t for t in current_tracks if t not in priority_set]
+
+            random.shuffle(non_priority_in_playlist)
+            desired_order = priority_in_playlist + non_priority_in_playlist
             
             if desired_order == current_tracks:
                 logger.info("Reorder skipped: already in desired random order")
