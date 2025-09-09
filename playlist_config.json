@@ -109,7 +109,7 @@
       "source_playlists": [
         "580P0wvHL8eRYyEODWQAeR"
       ],
-      "priority_songs": [],
+      "priority_songs": ["3CmlpwhlM0ZNe1rggu7him"],
       "description_template": "Afro House mix with {} and more!",
       "max_songs": 80,
       "update_schedule": "saturday"
@@ -120,7 +120,7 @@
       "source_playlists": [
         "5mZaNT0CzJWHrWuE3xRopB"
       ],
-      "priority_songs": [],
+      "priority_songs": ["3CmlpwhlM0ZNe1rggu7him"],
       "description_template": "Future Bass music for you to enjoy!",
       "max_songs": 100,
       "update_schedule": "saturday"
@@ -131,7 +131,7 @@
       "source_playlists": [
         "0Q3ugz23LAXFg2PvXJ8hMx"
       ],
-      "priority_songs": [],
+      "priority_songs": ["3CmlpwhlM0ZNe1rggu7him"],
       "description_template": "Trance music for you to enjoy!",
       "max_songs": 100,
       "update_schedule": "saturday"
@@ -142,7 +142,9 @@
       "source_playlists": [
         "3oEXfT2t2EZFSHxmRIL4A0"
       ],
-      "priority_songs": [],
+      "priority_songs": [
+        "3CmlpwhlM0ZNe1rggu7him"
+      ],
       "description_template": "EDM Techno music for you to enjoy!",
       "max_songs": 100,
       "update_schedule": "saturday"
@@ -153,7 +155,9 @@
       "source_playlists": [
         "5PCv6afEatU3z9cq2fBPDs"
       ],
-      "priority_songs": [],
+      "priority_songs": [
+        "3CmlpwhlM0ZNe1rggu7him"
+      ],
       "description_template": "EDM party mix with {} and more!",
       "max_songs": 100,
       "update_schedule": "saturday"
