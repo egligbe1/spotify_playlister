@@ -392,33 +392,120 @@ class MultiPlaylistManager:
         except Exception as e:
             logger.error(f"Failed to update metadata for {target_playlist}: {e}")
     
-    def reorder_playlist_random(self, target_playlist, priority_songs):
-        """Randomly reorder while preserving 'added_at', pinning priority songs to the top.
+    def fetch_tracks_with_added_dates(self, target_playlist):
+        """Fetch current tracks with their added_at dates"""
+        current_tracks_with_dates = []
+        max_retries = self.config['global_settings']['max_retries']
+        market = os.getenv('SPOTIFY_MARKET', None)
+        
+        try:
+            results = self.sp.playlist_tracks(target_playlist, market=market)
+            while results:
+                for attempt in range(max_retries):
+                    try:
+                        for item in results['items']:
+                            if item['track']:
+                                current_tracks_with_dates.append({
+                                    'id': item['track']['id'],
+                                    'added_at': item['added_at']
+                                })
+                        results = self.sp.next(results) if results['next'] else None
+                        break
+                    except spotipy.exceptions.SpotifyException as e:
+                        if e.http_status == 429:
+                            sleep_time = 2 ** attempt
+                            logger.warning(f"Rate limit hit for fetching track dates. Retrying in {sleep_time} seconds...")
+                            sleep(sleep_time)
+                        else:
+                            logger.error(f"Failed to fetch track dates: {e}")
+                            return []
+                    except Exception as e:
+                        logger.error(f"Unexpected error fetching track dates: {e}")
+                        return []
+            
+            logger.debug(f"Fetched {len(current_tracks_with_dates)} tracks with dates")
+            return current_tracks_with_dates
+        except Exception as e:
+            logger.error(f"Failed to fetch tracks with dates: {e}")
+            return []
+
+    def reorder_playlist_smart(self, target_playlist, priority_songs, newly_added_tracks=None):
+        """Smart reordering that prioritizes newly added tracks at the top.
         - Priority songs: kept at the top in their current relative order
-        - Non-priority songs: uniformly shuffled beneath priority block
+        - Newly added tracks: placed after priority songs (with some randomness)
+        - Existing tracks: shuffled below newly added tracks
         Uses Spotify's reorder API to avoid remove+add, which would reset dates.
         """
         try:
-            # Build current order of track IDs
-            current_tracks = self.fetch_current_playlist_tracks(target_playlist)
-            if not current_tracks:
+            # Get configuration settings
+            reorder_strategy = self.config['global_settings'].get('reorder_strategy', 'smart')
+            new_track_threshold_days = self.config['global_settings'].get('new_track_threshold_days', 7)
+            randomize_within_groups = self.config['global_settings'].get('randomize_within_groups', True)
+            
+            # Get current tracks with their added dates
+            current_tracks_with_dates = self.fetch_tracks_with_added_dates(target_playlist)
+            if not current_tracks_with_dates:
                 return
             
-            # Compute desired order with priority block pinned to the top
+            current_track_ids = [t['id'] for t in current_tracks_with_dates]
+            
+            # If newly_added_tracks not provided, determine them based on recent additions
+            if newly_added_tracks is None:
+                # Consider tracks added in the last N days as "new" (configurable)
+                cutoff_date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=new_track_threshold_days)
+                newly_added_tracks = []
+                
+                for track in current_tracks_with_dates:
+                    try:
+                        added_date = datetime.datetime.fromisoformat(track['added_at'].replace('Z', '+00:00'))
+                        if added_date > cutoff_date:
+                            newly_added_tracks.append(track['id'])
+                    except Exception as e:
+                        logger.warning(f"Could not parse date for track {track['id']}: {e}")
+            
+            # Separate tracks into categories
             priority_set = set(priority_songs)
-            priority_in_playlist = [t for t in current_tracks if t in priority_set]
-            non_priority_in_playlist = [t for t in current_tracks if t not in priority_set]
-
-            random.shuffle(non_priority_in_playlist)
-            desired_order = priority_in_playlist + non_priority_in_playlist
+            newly_added_set = set(newly_added_tracks)
             
-            if desired_order == current_tracks:
-                logger.info("Reorder skipped: already in desired random order")
+            priority_in_playlist = [t for t in current_track_ids if t in priority_set]
+            newly_added_in_playlist = [t for t in current_track_ids if t in newly_added_set and t not in priority_set]
+            existing_in_playlist = [t for t in current_track_ids if t not in priority_set and t not in newly_added_set]
+
+            # Apply randomization based on configuration
+            if randomize_within_groups:
+                random.shuffle(newly_added_in_playlist)
+                random.shuffle(existing_in_playlist)
+            
+            # Build desired order based on strategy
+            if reorder_strategy == 'smart':
+                # Smart ordering: priority + newly added + existing
+                desired_order = priority_in_playlist + newly_added_in_playlist + existing_in_playlist
+            elif reorder_strategy == 'random':
+                # Pure random: shuffle everything except priority songs
+                non_priority = newly_added_in_playlist + existing_in_playlist
+                random.shuffle(non_priority)
+                desired_order = priority_in_playlist + non_priority
+            elif reorder_strategy == 'chronological':
+                # Chronological: priority + tracks in order of addition (newest first)
+                all_non_priority = newly_added_in_playlist + existing_in_playlist
+                # Sort by added_at date (newest first)
+                track_dates = {t['id']: t['added_at'] for t in current_tracks_with_dates}
+                all_non_priority.sort(key=lambda x: track_dates.get(x, ''), reverse=True)
+                desired_order = priority_in_playlist + all_non_priority
+            else:
+                # Default to smart ordering
+                desired_order = priority_in_playlist + newly_added_in_playlist + existing_in_playlist
+            
+            if desired_order == current_track_ids:
+                logger.info("Reorder skipped: already in desired order")
                 return
+            
+            # Log the reordering strategy
+            logger.info(f"Reorder strategy '{reorder_strategy}': {len(priority_in_playlist)} priority, {len(newly_added_in_playlist)} newly added, {len(existing_in_playlist)} existing tracks")
             
             max_retries = self.config['global_settings']['max_retries']
             # Perform in-place transformation using Spotify reorder API
-            working = list(current_tracks)
+            working = list(current_track_ids)
             for target_index, track_id in enumerate(desired_order):
                 if working[target_index] == track_id:
                     continue
@@ -453,9 +540,15 @@ class MultiPlaylistManager:
                     except Exception as e:
                         logger.error(f"Unexpected error during reorder: {e}")
                         break
-            logger.info("Completed random reorder while preserving 'added_at'")
+            logger.info(f"Completed {reorder_strategy} reorder while preserving 'added_at'")
         except Exception as e:
-            logger.error(f"Failed to perform random reorder: {e}")
+            logger.error(f"Failed to perform smart reorder: {e}")
+
+    def reorder_playlist_random(self, target_playlist, priority_songs):
+        """Legacy random reordering method - kept for backward compatibility.
+        Now calls the smart reordering method with no newly added tracks specified.
+        """
+        self.reorder_playlist_smart(target_playlist, priority_songs, newly_added_tracks=[])
     
     def update_single_playlist(self, playlist_config):
         """Update a single playlist based on its configuration"""
@@ -593,8 +686,8 @@ class MultiPlaylistManager:
 
                 logger.info(f"Trimmed playlist {playlist_name} to {len(tracks_to_keep_final)} tracks (max: {max_songs}) without re-adding, preserving 'date added' for kept tracks")
             
-            # Randomly reorder while preserving 'added_at'
-            self.reorder_playlist_random(target_playlist, priority_songs)
+            # Smart reorder with newly added tracks prioritized at top
+            self.reorder_playlist_smart(target_playlist, priority_songs, tracks_to_add)
             
             # Wait for operations to register before updating metadata
             sleep(5)

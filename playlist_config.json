@@ -168,6 +168,9 @@
     "update_day": "saturday",
     "max_retries": 3,
     "timeout": 30,
-    "contact_email": "skeledon246@gmail.com"
+    "contact_email": "skeledon246@gmail.com",
+    "reorder_strategy": "smart",
+    "new_track_threshold_days": 7,
+    "randomize_within_groups": true
   }
 }
