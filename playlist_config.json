@@ -37,7 +37,8 @@
       ],
       "priority_songs": [
         "04LwWjNpLtT9Lnxw8jEw7F",
-        "2kJtyjaHRb5lKma4Wy8i7s"
+        "2kJtyjaHRb5lKma4Wy8i7s",
+        "1GepiLqxDawC2RRXlNtgOB"
       ],
       "description_template": "afrobeats: best served chilled.",
       "max_songs": 70,
@@ -50,7 +51,8 @@
         "7gvqC9vz8pPdnn3P3M4AAg"
       ],
       "priority_songs": [
-        "04LwWjNpLtT9Lnxw8jEw7F"
+        "04LwWjNpLtT9Lnxw8jEw7F",
+        "1GepiLqxDawC2RRXlNtgOB"
       ],
       "description_template": "High energy workout mix featuring {}. ",
       "max_songs": 70,
@@ -62,7 +64,8 @@
       "source_playlists": [
         "5fuapK5Ng0OuGi46TJM8Nn"
       ],
-      "priority_songs": [],
+      "priority_songs": [
+      "1GepiLqxDawC2RRXlNtgOB"],
       "description_template": "Late night vibes with {}.",
       "max_songs": 70,
       "update_schedule": "saturday"
@@ -73,7 +76,8 @@
       "source_playlists": [
         "3jtttW0WBSqL8kWwXADXOJ"
       ],
-      "priority_songs": [],
+      "priority_songs": [
+      "1GepiLqxDawC2RRXlNtgOB"],
       "description_template": "Weekend party mix with {} and more!",
       "max_songs": 80,
       "update_schedule": "saturday"
@@ -109,7 +113,8 @@
       "source_playlists": [
         "580P0wvHL8eRYyEODWQAeR"
       ],
-      "priority_songs": ["3CmlpwhlM0ZNe1rggu7him"],
+      "priority_songs": ["3CmlpwhlM0ZNe1rggu7him",
+      "1GepiLqxDawC2RRXlNtgOB"],
       "description_template": "Afro House mix with {} and more!",
       "max_songs": 80,
       "update_schedule": "saturday"
@@ -120,7 +125,8 @@
       "source_playlists": [
         "5mZaNT0CzJWHrWuE3xRopB"
       ],
-      "priority_songs": ["3CmlpwhlM0ZNe1rggu7him"],
+      "priority_songs": ["3CmlpwhlM0ZNe1rggu7him",
+      "1GepiLqxDawC2RRXlNtgOB"],
       "description_template": "Future Bass music for you to enjoy!",
       "max_songs": 100,
       "update_schedule": "saturday"
@@ -131,7 +137,8 @@
       "source_playlists": [
         "0Q3ugz23LAXFg2PvXJ8hMx"
       ],
-      "priority_songs": ["3CmlpwhlM0ZNe1rggu7him"],
+      "priority_songs": ["3CmlpwhlM0ZNe1rggu7him",
+      "1GepiLqxDawC2RRXlNtgOB"],
       "description_template": "Trance music for you to enjoy!",
       "max_songs": 100,
       "update_schedule": "saturday"
@@ -143,7 +150,8 @@
         "3oEXfT2t2EZFSHxmRIL4A0"
       ],
       "priority_songs": [
-        "3CmlpwhlM0ZNe1rggu7him"
+        "3CmlpwhlM0ZNe1rggu7him",
+        "1GepiLqxDawC2RRXlNtgOB"
       ],
       "description_template": "EDM Techno music for you to enjoy!",
       "max_songs": 100,
@@ -156,7 +164,8 @@
         "5PCv6afEatU3z9cq2fBPDs"
       ],
       "priority_songs": [
-        "3CmlpwhlM0ZNe1rggu7him"
+        "3CmlpwhlM0ZNe1rggu7him",
+        "1GepiLqxDawC2RRXlNtgOB"
       ],
       "description_template": "EDM party mix with {} and more!",
       "max_songs": 100,
