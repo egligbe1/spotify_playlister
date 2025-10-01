@@ -12,6 +12,9 @@ import io
 import base64
 from time import sleep
 import random
+import concurrent.futures
+import threading
+from functools import lru_cache
 
 # Load environment variables
 load_dotenv()
@@ -39,11 +42,34 @@ class MultiPlaylistManager:
         self.sp = None
         self.config = self.load_config()
         self.ensure_directories()
+        self._track_cache = {}
+        self._playlist_cache = {}
+        self._cache_lock = threading.Lock()
         
     def ensure_directories(self):
         """Ensure necessary directories exist"""
         for directory in [RECORDS_DIR, LAST_UPDATES_DIR]:
             Path(directory).mkdir(exist_ok=True)
+    
+    def get_cached_tracks(self, playlist_id):
+        """Get cached tracks for a playlist"""
+        with self._cache_lock:
+            return self._track_cache.get(playlist_id)
+    
+    def set_cached_tracks(self, playlist_id, tracks):
+        """Cache tracks for a playlist"""
+        with self._cache_lock:
+            self._track_cache[playlist_id] = tracks
+    
+    def get_cached_playlist_data(self, playlist_id):
+        """Get cached playlist data"""
+        with self._cache_lock:
+            return self._playlist_cache.get(playlist_id)
+    
+    def set_cached_playlist_data(self, playlist_id, data):
+        """Cache playlist data"""
+        with self._cache_lock:
+            self._playlist_cache[playlist_id] = data
     
     def load_config(self):
         """Load playlist configuration"""
@@ -196,29 +222,52 @@ class MultiPlaylistManager:
             logger.error(f"Failed to save last update for {playlist_name}: {e}")
     
     def fetch_tracks_from_sources(self, source_playlists):
-        """Fetch tracks from multiple source playlists with rate limit handling"""
+        """Fetch tracks from multiple source playlists with caching and parallel processing"""
         all_source_tracks = []
         max_retries = self.config['global_settings']['max_retries']
         market = os.getenv('SPOTIFY_MARKET', None)
-        for source_playlist in source_playlists:
+        
+        def fetch_single_source(source_playlist):
+            """Fetch tracks from a single source playlist"""
+            # Check cache first
+            cached_tracks = self.get_cached_tracks(source_playlist)
+            if cached_tracks:
+                logger.debug(f"Using cached tracks for source {source_playlist}")
+                return cached_tracks
+            
             for attempt in range(max_retries):
                 try:
                     results = self.sp.playlist_tracks(source_playlist, market=market)
                     source_tracks = [item['track']['id'] for item in results['items'] if item['track']]
-                    all_source_tracks.extend(source_tracks)
+                    # Cache the results
+                    self.set_cached_tracks(source_playlist, source_tracks)
                     logger.info(f"Fetched {len(source_tracks)} tracks from source {source_playlist}")
-                    break
+                    return source_tracks
                 except spotipy.exceptions.SpotifyException as e:
                     if e.http_status == 429:
-                        sleep_time = 2 ** attempt
+                        sleep_time = min(2 ** attempt, 10)  # Cap sleep time
                         logger.warning(f"Rate limit hit for source {source_playlist}. Retrying in {sleep_time} seconds...")
                         sleep(sleep_time)
                     else:
                         logger.error(f"Failed to fetch tracks from {source_playlist}: {e}")
-                        break
+                        return []
                 except Exception as e:
                     logger.error(f"Unexpected error fetching tracks from {source_playlist}: {e}")
-                    break
+                    return []
+            return []
+        
+        # Use ThreadPoolExecutor for parallel fetching
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            future_to_playlist = {executor.submit(fetch_single_source, playlist): playlist 
+                                for playlist in source_playlists}
+            
+            for future in concurrent.futures.as_completed(future_to_playlist):
+                playlist = future_to_playlist[future]
+                try:
+                    tracks = future.result()
+                    all_source_tracks.extend(tracks)
+                except Exception as e:
+                    logger.error(f"Error fetching from {playlist}: {e}")
         
         # Remove duplicates while preserving order
         unique_tracks = list(dict.fromkeys(all_source_tracks))
@@ -256,14 +305,19 @@ class MultiPlaylistManager:
             return []
     
     def fetch_track_metadata(self, track_ids):
-        """Fetch metadata for track IDs with rate limit handling"""
+        """Fetch metadata for track IDs with optimized batching and caching"""
         track_data = []
         max_retries = self.config['global_settings']['max_retries']
-        for i in range(0, len(track_ids), 50):
-            batch = track_ids[i:i + 50]
+        market = os.getenv('SPOTIFY_MARKET', None)
+        
+        # Process in larger batches for better efficiency
+        batch_size = 50
+        for i in range(0, len(track_ids), batch_size):
+            batch = track_ids[i:i + batch_size]
+            
             for attempt in range(max_retries):
                 try:
-                    tracks_info = self.sp.tracks(batch, market=os.getenv('SPOTIFY_MARKET', None))
+                    tracks_info = self.sp.tracks(batch, market=market)
                     for track in tracks_info['tracks']:
                         if track:
                             track_data.append({
@@ -276,7 +330,7 @@ class MultiPlaylistManager:
                     break
                 except spotipy.exceptions.SpotifyException as e:
                     if e.http_status == 429:
-                        sleep_time = 2 ** attempt
+                        sleep_time = min(2 ** attempt, 10)  # Cap sleep time
                         logger.warning(f"Rate limit hit for track metadata batch. Retrying in {sleep_time} seconds...")
                         sleep(sleep_time)
                     else:
@@ -299,8 +353,8 @@ class MultiPlaylistManager:
             artist_name = "Unknown Artist"
             track_name = "Unknown Track"
             
-            # Wait longer for playlist changes to propagate
-            sleep(10)
+            # Reduced wait time for playlist changes to propagate
+            sleep(3)
             
             for attempt in range(max_retries):
                 try:
@@ -315,7 +369,7 @@ class MultiPlaylistManager:
                         logger.warning(f"No tracks found in playlist {target_playlist}")
                         # Wait and retry if no tracks found
                         if attempt < max_retries - 1:
-                            sleep(5)
+                            sleep(2)
                         break
                 except spotipy.exceptions.SpotifyException as e:
                     if e.http_status == 429:
@@ -358,7 +412,7 @@ class MultiPlaylistManager:
                     logger.info(f"Attempting to update cover image from: {image_url}")
                     for attempt in range(max_retries):
                         try:
-                            response = requests.get(image_url, timeout=60)  # Increased timeout
+                            response = requests.get(image_url, timeout=30)  # Optimized timeout
                             if response.status_code == 200:
                                 img = Image.open(io.BytesIO(response.content)).resize((640, 640), Image.Resampling.LANCZOS)
                                 img_byte_arr = io.BytesIO()
@@ -370,7 +424,7 @@ class MultiPlaylistManager:
                             else:
                                 logger.warning(f"Failed to download image: HTTP {response.status_code}")
                                 if attempt < max_retries - 1:
-                                    sleep(5)
+                                    sleep(2)
                         except spotipy.exceptions.SpotifyException as e:
                             if e.http_status == 429:
                                 sleep_time = 2 ** attempt
@@ -382,7 +436,7 @@ class MultiPlaylistManager:
                         except Exception as e:
                             logger.error(f"Unexpected error updating cover image for {target_playlist}: {e}")
                             if attempt < max_retries - 1:
-                                sleep(5)
+                                sleep(2)
                             break
                 else:
                     logger.warning(f"No album images found for top track in {target_playlist}")
@@ -690,7 +744,7 @@ class MultiPlaylistManager:
             self.reorder_playlist_smart(target_playlist, priority_songs, tracks_to_add)
             
             # Wait for operations to register before updating metadata
-            sleep(5)
+            sleep(2)
             
             # Always update metadata to ensure cover and description are current
             self.update_playlist_metadata(target_playlist, [], description_template)
@@ -707,7 +761,7 @@ class MultiPlaylistManager:
             logger.error(f"Failed to update {playlist_name}: {e}")
     
     def update_all_playlists(self):
-        """Update all configured playlists"""
+        """Update all configured playlists with parallel processing"""
         if not self.config:
             logger.error("No configuration loaded")
             return
@@ -721,19 +775,31 @@ class MultiPlaylistManager:
             logger.error("Failed to initialize Spotify client. Ensure token_info.json is set in GitHub Secrets as TOKEN_INFO_JSON.")
             return
         
-        logger.info(f"Starting updates for {len(self.config['playlists'])} playlists")
+        logger.info(f"Starting parallel updates for {len(self.config['playlists'])} playlists")
         
-        for playlist_config in self.config['playlists']:
-            try:
-                self.update_single_playlist(playlist_config)
-                sleep(2)
-            except Exception as e:
-                logger.error(f"Error updating {playlist_config['name']}: {e}")
+        # Use ThreadPoolExecutor for parallel processing
+        max_workers = min(4, len(self.config['playlists']))  # Limit concurrent playlists
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all playlist updates
+            future_to_playlist = {
+                executor.submit(self.update_single_playlist, playlist_config): playlist_config['name']
+                for playlist_config in self.config['playlists']
+            }
+            
+            # Process completed updates
+            for future in concurrent.futures.as_completed(future_to_playlist):
+                playlist_name = future_to_playlist[future]
+                try:
+                    future.result()
+                    logger.info(f"Successfully completed update for {playlist_name}")
+                except Exception as e:
+                    logger.error(f"Error updating {playlist_name}: {e}")
         
         logger.info("Completed all playlist updates")
     
     def force_metadata_update_all(self):
-        """Force metadata update for all playlists without changing tracks"""
+        """Force metadata update for all playlists without changing tracks - optimized with parallel processing"""
         if not self.config:
             logger.error("No configuration loaded")
             return
@@ -747,9 +813,10 @@ class MultiPlaylistManager:
             logger.error("Failed to initialize Spotify client. Ensure token_info.json is set in GitHub Secrets as TOKEN_INFO_JSON.")
             return
         
-        logger.info(f"Force updating metadata for {len(self.config['playlists'])} playlists")
+        logger.info(f"Force updating metadata for {len(self.config['playlists'])} playlists in parallel")
         
-        for playlist_config in self.config['playlists']:
+        def update_metadata_single(playlist_config):
+            """Update metadata for a single playlist"""
             try:
                 playlist_name = playlist_config['name']
                 target_playlist = playlist_config['target_playlist_id']
@@ -757,9 +824,29 @@ class MultiPlaylistManager:
                 
                 logger.info(f"Force updating metadata for: {playlist_name}")
                 self.update_playlist_metadata(target_playlist, [], description_template)
-                sleep(2)
+                return playlist_name
             except Exception as e:
                 logger.error(f"Error force updating metadata for {playlist_config['name']}: {e}")
+                return None
+        
+        # Use ThreadPoolExecutor for parallel metadata updates
+        max_workers = min(6, len(self.config['playlists']))  # More workers for metadata-only updates
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_playlist = {
+                executor.submit(update_metadata_single, playlist_config): playlist_config['name']
+                for playlist_config in self.config['playlists']
+            }
+            
+            # Process completed updates
+            for future in concurrent.futures.as_completed(future_to_playlist):
+                playlist_name = future_to_playlist[future]
+                try:
+                    result = future.result()
+                    if result:
+                        logger.info(f"Successfully updated metadata for {result}")
+                except Exception as e:
+                    logger.error(f"Error in metadata update for {playlist_name}: {e}")
         
         logger.info("Completed force metadata updates for all playlists")
 
