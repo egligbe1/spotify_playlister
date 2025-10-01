@@ -179,7 +179,111 @@
       "description_template": "EDM party mix with {} and more!",
       "max_songs": 100,
       "update_schedule": "saturday"
+    },
+    {
+      "name": "Alex Warren - Ordinary with Friends",
+      "target_playlist_id": "2G1EDpbAoQvMtX10GHhI2n",
+      "source_playlists": [
+        "0nBdTD4blUYFfb34S4eIzI",
+        "7zBneajPzFm0Z40m6oRUtr"
+      ],
+      "priority_songs": [
+        "6qqrTXSdwiJaq8SO0X2lSe",
+        "6wHpLMmp98aHcV8L1JFrj8",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "Tap ⨁ to hear new Alex Warren songs as soon as they drop!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "Bruno Mars - Die with a Smile",
+      "target_playlist_id": "0c919xDwytG72sTGDsAhU0",
+      "source_playlists": [
+        "1F4XAuSWIgdvi2tqbumHcE"
+      ],
+      "priority_songs": [
+        "2plbrEY59IikOBgBGLjaoe",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "Tap ⨁ to hear new Bruno Mars songs as soon as they drop!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "Dean Lewis - With You",
+      "target_playlist_id": "1CdDqJrszFpggH088RAe9o",
+      "source_playlists": [
+        "4FPxBSqX4BU88sEO07mCS5"
+      ],
+      "priority_songs": [
+        "7mdJAkMBPkKYOLxcVPDqa0",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "Tap ⨁ to hear new Dean Lewis songs as soon as they drop!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "Doja Cat - Jealous Type",
+      "target_playlist_id": "6n6hr2QEO0SMVkHphctoK4",
+      "source_playlists": [
+        "3kksNa7iaoiMHK0B2QtAOE"
+      ],
+      "priority_songs": [
+        "03JZr55j9bIj1d2RQJ7Yq9",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "Tap ⨁ to hear new Doja Cat songs as soon as they drop!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    
+    {
+      "name": "Sabrina Carpenter - Man's Best Friend",
+      "target_playlist_id": "5YSt2FS2A3CRE8KYBPRF3K",
+      "source_playlists": [
+        "7IOitp0zeXho4mDiYnKPHh"
+      ],
+      "priority_songs": [
+        "2BwO5K8Q7EPAJSGze3AAh9",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "Tap ⨁ to hear new Sabrina Carpenter songs as soon as they drop!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "Ariana Grande - eternal sunshine",
+      "target_playlist_id": "0BbmwdZXi27fo9GuuIqY2H",
+      "source_playlists": [
+        "2UrZudVtKmKk9c2hqrj155"
+      ],
+      "priority_songs": [
+        "5Tfrr45yeatPJJts3NkOBS",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "Tap ⨁ to hear new Ariana Grande songs as soon as they drop!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    
+    {
+      "name": "The Weeknd - After Hours",
+      "target_playlist_id": "4SxLZfj2yMLtIRqhTcW8B7",
+      "source_playlists": [
+        "2nRn1AnLMuuPdT47jzPd4E"
+      ],
+      "priority_songs": [
+        "2p8IUWQDrpjuFltbdgLOag",
+        "2p8IUWQDrpjuFltbdgLOag",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "Tap ⨁ to hear new The Weeknd songs as soon as they drop!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
     }
+
 
   ],
   "global_settings": {
