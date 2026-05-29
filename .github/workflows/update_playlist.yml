@@ -2,14 +2,14 @@ name: Update Spotify Playlist
 
 on:
   schedule:
-    - cron: "0 0 * * 6" # Runs every Saturday at 00:00 UTC
-  workflow_dispatch: # Allows manual triggering
+    - cron: "0 12 * * 3,6" # Wednesdays and Saturdays at 12:00 UTC
+  workflow_dispatch: # Manual trigger — always runs regardless of day
 
 jobs:
   update-playlist:
     runs-on: ubuntu-latest
-    timeout-minutes: 15 # Prevent hanging
-    environment: production # Specify the environment
+    timeout-minutes: 15
+    environment: production
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,9 +29,17 @@ jobs:
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
           SPOTIFY_USERNAME: ${{ secrets.SPOTIFY_USERNAME }}
+          SPOTIFY_REFRESH_TOKEN: ${{ secrets.SPOTIFY_REFRESH_TOKEN }}
           SOURCE_PLAYLIST: ${{ vars.SOURCE_PLAYLIST }}
           TARGET_PLAYLIST: ${{ vars.TARGET_PLAYLIST }}
           PLAYLIST_DESCRIPTION: ${{ vars.PLAYLIST_DESCRIPTION }}
+          PLAYLIST_NAME: ${{ vars.PLAYLIST_NAME }}
+          TARGET_PUBLIC: "true"
+          # TRENDING_PLAYLISTS: ${{ vars.TRENDING_PLAYLISTS }}             # optional: explicit playlist IDs
+          # TRENDING_SEARCH_QUERIES: ${{ vars.TRENDING_SEARCH_QUERIES }} # optional: override search queries
+          UPDATE_DAYS: "2,5" # Wednesday=2, Saturday=5
+          # Force the update when manually triggered via workflow_dispatch
+          FORCE_UPDATE: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
         run: python main.py
 
       - name: Debug file presence
@@ -41,12 +49,12 @@ jobs:
           if [ -f playlist_record.json ]; then echo "playlist_record.json exists"; else echo "playlist_record.json not found"; fi
           if [ -f priority_songs.json ]; then echo "priority_songs.json exists"; else echo "priority_songs.json not found"; fi
 
-      - name: Commit updated files
+      - name: Commit updated state files
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add last_update.json playlist_record.json priority_songs.json || echo "No files to add"
-          git commit -m "Update last_update.json, playlist_record.json, and priority_songs.json after playlist update" || echo "No changes to commit"
+          git add last_update.json playlists_config.json || echo "No files to add"
+          git commit -m "chore: update playlist state files [skip ci]" || echo "No changes to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

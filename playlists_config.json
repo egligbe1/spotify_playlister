@@ -1,0 +1,281 @@
+{
+  "playlists": [
+
+    // ── GENRE / THEME PLAYLISTS ──────────────────────────────────────────────
+    {
+      "id": "1NacBkTTb3o1WAZIBVDlx8",
+      "type": "genre",
+      "name": "Afrobeats On Rotation",
+      "description": "Trending Afrobeats and Afro-fusion on rotation. Featuring {0} and more. Updated every week. Follow to stay current. Submissions: skeledon246@gmail.com.",
+      "max_songs": 70,
+      "public": true,
+      "search_queries": ["afrobeats 2025", "afro fusion hits", "naija afrobeats 2025", "afrobeats rotation"],
+      "source_playlists": ["4HXMPRVKOAfzoUwws8fqHW"],
+      "priority_songs": [
+        {"track_id": "5FG7Tl93LdH117jEKYl3Cm", "song_name": "Essence", "artist_name": "Wizkid feat. Tems"},
+        {"track_id": "1k51Q6GFWBbsaWlBB2gnzo", "song_name": "Gimme Dat", "artist_name": "Ayra Starr ft. Wizkid"}
+      ]
+    },
+    {
+      "id": "3MTIWg0xMEvm6jhCu6tgBO",
+      "type": "genre",
+      "name": "Best Afrobeats Party Mix",
+      "description": "The hottest Afrobeats party bangers. Featuring {0} and more. Updated weekly. Follow for the best Afrobeats party mix. Submissions: skeledon246@gmail.com.",
+      "max_songs": 80,
+      "public": true,
+      "search_queries": ["afrobeats party bangers", "naija party hits 2025", "afrobeats turn up 2025", "afrobeats club mix"],
+      "source_playlists": [],
+      "priority_songs": [
+        {"track_id": "4DREBgUie15tAPq9KQqe2c", "song_name": "Laho II", "artist_name": "Shallipopi ft. Burna Boy"},
+        {"track_id": "5GyaXqMfcIGHfmTUITFacS", "song_name": "With You", "artist_name": "Davido ft Omah Lay"}
+      ]
+    },
+    {
+      "id": "6hpMoezttClWaqVbzMZfPM",
+      "type": "genre",
+      "name": "Naija Hot Hits",
+      "description": "The hottest Nigerian music right now. Featuring {0} and more. Updated weekly. Follow for the freshest Naija hits. Submissions: skeledon246@gmail.com.",
+      "max_songs": 70,
+      "public": true,
+      "search_queries": ["naija hits 2025", "nigerian afrobeats 2025", "naija top songs", "nigeria number one hits"],
+      "source_playlists": [],
+      "priority_songs": [
+        {"track_id": "4WnlAkJ3S0r6C7ofHy6kNP", "song_name": "Arike", "artist_name": "Kunmie"},
+        {"track_id": "3RcnE81xkgBr7av1elOLV8", "song_name": "Father", "artist_name": "Selvibez"}
+      ]
+    },
+    {
+      "id": "4HTcVZhv0uVORvsRhozvGA",
+      "type": "genre",
+      "name": "TOP HITS IN GHANA NOW",
+      "description": "Top hits in Ghana right now. Featuring {0} and more. Afrobeats, Highlife, Asakaa and more. Updated weekly. Submissions: skeledon246@gmail.com.",
+      "max_songs": 80,
+      "public": true,
+      "search_queries": ["ghana hits 2025", "ghana afrobeats top songs", "ghana highlife 2025", "ghana music chart"],
+      "source_playlists": [],
+      "priority_songs": [
+        {"track_id": "3RcnE81xkgBr7av1elOLV8", "song_name": "Father", "artist_name": "Selvibez"}
+      ]
+    },
+    {
+      "id": "2jjdqZdtH2wVN0OjQcjdaK",
+      "type": "genre",
+      "name": "Chill Afro Vibes",
+      "description": "Afrobeats best served chilled. Featuring {0} and more. Smooth Afro-soul and mellow vibes. Updated weekly. Submissions: skeledon246@gmail.com.",
+      "max_songs": 70,
+      "public": true,
+      "search_queries": ["chill afrobeats vibes", "afro soul 2025", "mellow afrobeats playlist", "afrobeats slow songs"],
+      "source_playlists": [],
+      "priority_songs": [
+        {"track_id": "4WnlAkJ3S0r6C7ofHy6kNP", "song_name": "Arike", "artist_name": "Kunmie"}
+      ]
+    },
+    {
+      "id": "46s8ZQypznfdUxDLlNMfsJ",
+      "type": "genre",
+      "name": "Late Night Chill Vibes",
+      "description": "Late night chill vibes. Featuring {0} and more. R&B, Afro-soul, and smooth sounds for winding down. Updated weekly. Submissions: skeledon246@gmail.com.",
+      "max_songs": 70,
+      "public": true,
+      "search_queries": ["late night rnb chill", "afro soul late night", "afrobeats midnight vibes", "chill rnb afro 2025"],
+      "source_playlists": [],
+      "priority_songs": [
+        {"track_id": "5FG7Tl93LdH117jEKYl3Cm", "song_name": "Essence", "artist_name": "Wizkid feat. Tems"}
+      ]
+    },
+    {
+      "id": "4UMk5Pr71clB6QJRaRIZpb",
+      "type": "genre",
+      "name": "Fun Weekend Party Mix",
+      "description": "Your weekend sorted. Featuring {0} and more. The best feel-good party hits updated every week. Follow and never miss a banger. Submissions: skeledon246@gmail.com.",
+      "max_songs": 80,
+      "public": true,
+      "search_queries": ["weekend party hits 2025", "fun party mix", "feel good hits 2025", "weekend vibes playlist"],
+      "source_playlists": [],
+      "priority_songs": [
+        {"track_id": "1k51Q6GFWBbsaWlBB2gnzo", "song_name": "Gimme Dat", "artist_name": "Ayra Starr ft. Wizkid"}
+      ]
+    },
+    {
+      "id": "2bT7HfYMzUy3mTKvLJftDP",
+      "type": "genre",
+      "name": "AFRO HOUSE MIX",
+      "description": "Afro House music to keep you moving. Featuring {0} and more. Deep and energetic African house. Updated weekly. Submissions: skeledon246@gmail.com.",
+      "max_songs": 80,
+      "public": true,
+      "search_queries": ["afro house music 2025", "deep afro house dj", "african house music mix", "afro house south africa"],
+      "source_playlists": [],
+      "priority_songs": []
+    },
+    {
+      "id": "6XDhzruHVyCc4lfSnNzgig",
+      "type": "genre",
+      "name": "Amapiano Vibes",
+      "description": "The best Amapiano and South African house music. Featuring {0} and more. Log drum, piano, and good vibes. Updated weekly. Submissions: skeledon246@gmail.com.",
+      "max_songs": 70,
+      "public": true,
+      "search_queries": ["amapiano 2025", "amapiano south africa hits", "amapiano log drum", "amapiano dj mix 2025"],
+      "source_playlists": [],
+      "priority_songs": []
+    },
+    {
+      "id": "3wXQ4sDGzG3DDtOECdEzEC",
+      "type": "genre",
+      "name": "Afrobeats Love Songs",
+      "description": "Romantic Afrobeats and Afro-soul for the feels. Featuring {0} and more. Updated weekly. Follow for the best Afrobeats love songs. Submissions: skeledon246@gmail.com.",
+      "max_songs": 70,
+      "public": true,
+      "search_queries": ["afrobeats love songs 2025", "romantic afrobeats playlist", "afro soul love songs", "afrobeats slow jams"],
+      "source_playlists": [],
+      "priority_songs": [
+        {"track_id": "5GyaXqMfcIGHfmTUITFacS", "song_name": "With You", "artist_name": "Davido ft Omah Lay"},
+        {"track_id": "5FG7Tl93LdH117jEKYl3Cm", "song_name": "Essence", "artist_name": "Wizkid feat. Tems"}
+      ]
+    },
+    {
+      "id": "6ZSAvN70G9hdFNtazrHKO1",
+      "type": "genre",
+      "name": "Workout Energy",
+      "description": "High energy workout and gym music. Featuring {0} and more. The best motivation hits to power your sessions. Updated weekly. Submissions: skeledon246@gmail.com.",
+      "max_songs": 70,
+      "public": true,
+      "search_queries": ["gym workout music 2025", "high energy fitness hits", "workout motivation playlist", "running music 2025"],
+      "source_playlists": [],
+      "priority_songs": []
+    },
+    {
+      "id": "2Zs0uVWbaVFPSYFrTrv2Ms",
+      "type": "genre",
+      "name": "EDM PARTY 2025",
+      "description": "The best EDM party bangers. Featuring {0} and more. Big room, festival drops, and dance floor hits. Updated weekly. Submissions: skeledon246@gmail.com.",
+      "max_songs": 100,
+      "public": true,
+      "search_queries": ["edm bangers 2025", "electronic dance music hits", "edm festival 2025", "big room edm drops"],
+      "source_playlists": [],
+      "priority_songs": []
+    },
+    {
+      "id": "7glsMaaTFfDvLbLtnGXXAC",
+      "type": "genre",
+      "name": "EDM TECHNO PARTY",
+      "description": "EDM Techno for the club. Featuring {0} and more. Dark, industrial, and driving beats. Updated weekly. Submissions: skeledon246@gmail.com.",
+      "max_songs": 100,
+      "public": true,
+      "search_queries": ["berlin techno 2025", "techno electronic club", "industrial techno dj", "dark techno music 2025"],
+      "source_playlists": [],
+      "priority_songs": []
+    },
+    {
+      "id": "2ypN3O58dpvp9RgA2LG90Z",
+      "type": "genre",
+      "name": "TRANCE MUSIC 2025",
+      "description": "The best Trance music. Featuring {0} and more. Progressive, vocal, and uplifting trance. Updated weekly. Submissions: skeledon246@gmail.com.",
+      "max_songs": 100,
+      "public": true,
+      "search_queries": ["progressive trance edm 2025", "vocal trance euphoria", "uplifting trance armin", "trance music electronic"],
+      "source_playlists": [],
+      "priority_songs": []
+    },
+    {
+      "id": "01aCl2C1PyekZ2pGeyKfzN",
+      "type": "genre",
+      "name": "FUTURE BASS 2025",
+      "description": "Future Bass and melodic electronic music. Featuring {0} and more. The best drops updated weekly. Submissions: skeledon246@gmail.com.",
+      "max_songs": 100,
+      "public": true,
+      "search_queries": ["future bass electronic 2025", "future bass edm porter robinson", "melodic future bass flume", "future bass trap 2025"],
+      "source_playlists": [],
+      "priority_songs": []
+    },
+
+    // ── ARTIST PLAYLISTS ─────────────────────────────────────────────────────
+    {
+      "id": "3Z7SiMpsyyZjJJiUNWKFck",
+      "type": "artist",
+      "name": "Drake",
+      "artist_name": "Drake",
+      "include_features": false,
+      "description": "The complete Drake discography, updated weekly. For submissions, contact: skeledon246@gmail.com.",
+      "max_songs": 100,
+      "public": true,
+      "priority_songs": []
+    },
+    {
+      "id": "4SxLZfj2yMLtIRqhTcW8B7",
+      "type": "artist",
+      "name": "The Weeknd - After Hours",
+      "artist_name": "The Weeknd",
+      "include_features": false,
+      "description": "The complete Weeknd discography, updated weekly. For submissions, contact: skeledon246@gmail.com.",
+      "max_songs": 100,
+      "public": true,
+      "priority_songs": []
+    },
+    {
+      "id": "0BbmwdZXi27fo9GuuIqY2H",
+      "type": "artist",
+      "name": "Ariana Grande - eternal sunshine",
+      "artist_name": "Ariana Grande",
+      "include_features": false,
+      "description": "The complete Ariana Grande discography, updated weekly. For submissions, contact: skeledon246@gmail.com.",
+      "max_songs": 100,
+      "public": true,
+      "priority_songs": []
+    },
+    {
+      "id": "5YSt2FS2A3CRE8KYBPRF3K",
+      "type": "artist",
+      "name": "Sabrina Carpenter - Manchild",
+      "artist_name": "Sabrina Carpenter",
+      "include_features": false,
+      "description": "The complete Sabrina Carpenter discography, updated weekly. For submissions, contact: skeledon246@gmail.com.",
+      "max_songs": 100,
+      "public": true,
+      "priority_songs": []
+    },
+    {
+      "id": "6n6hr2QEO0SMVkHphctoK4",
+      "type": "artist",
+      "name": "Doja Cat - Jealous Type",
+      "artist_name": "Doja Cat",
+      "include_features": false,
+      "description": "The complete Doja Cat discography, updated weekly. For submissions, contact: skeledon246@gmail.com.",
+      "max_songs": 100,
+      "public": true,
+      "priority_songs": []
+    },
+    {
+      "id": "1CdDqJrszFpggH088RAe9o",
+      "type": "artist",
+      "name": "Dean Lewis - With You",
+      "artist_name": "Dean Lewis",
+      "include_features": false,
+      "description": "The complete Dean Lewis discography, updated weekly. For submissions, contact: skeledon246@gmail.com.",
+      "max_songs": 100,
+      "public": true,
+      "priority_songs": []
+    },
+    {
+      "id": "0c919xDwytG72sTGDsAhU0",
+      "type": "artist",
+      "name": "Bruno Mars - Die With A Smile",
+      "artist_name": "Bruno Mars",
+      "include_features": false,
+      "description": "The complete Bruno Mars discography, updated weekly. For submissions, contact: skeledon246@gmail.com.",
+      "max_songs": 100,
+      "public": true,
+      "priority_songs": []
+    },
+    {
+      "id": "2G1EDpbAoQvMtX10GHhI2n",
+      "type": "artist",
+      "name": "Alex Warren - Ordinary with Friends",
+      "artist_name": "Alex Warren",
+      "include_features": false,
+      "description": "The complete Alex Warren discography, updated weekly. For submissions, contact: skeledon246@gmail.com.",
+      "max_songs": 100,
+      "public": true,
+      "priority_songs": []
+    }
+  ]
+}

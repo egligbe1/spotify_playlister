@@ -1,6 +1,12 @@
 .env
-playlist_record.json
+token_info.json
 updater.log
 venv/
+playlister_venv/
 __pycache__/
 *.pyc
+.gitconfig
+.history
+.vscode
+.gitignore
+.claude/
