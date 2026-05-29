@@ -1,0 +1,163 @@
+name: Update Spotify Playlists
+
+on:
+  schedule:
+    - cron: "0 0 * * 6" # Runs every Saturday at 00:00 UTC
+  workflow_dispatch: # Allows manual triggering
+
+permissions:
+  contents: write  # Allows pushing changes to the repo
+
+jobs:
+  update-playlists:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15 # Prevent hanging
+    environment: production # Specify the environment
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run playlist updater
+        env:
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          SPOTIFY_USERNAME: ${{ secrets.SPOTIFY_USERNAME }}
+          SPOTIFY_MARKET: ${{ secrets.SPOTIFY_MARKET }} # Optional
+          SPOTIPY_REDIRECT_URI: http://127.0.0.1:8888/callback
+          TOKEN_INFO_JSON: ${{ secrets.TOKEN_INFO_JSON }}
+        run: |
+          echo "$TOKEN_INFO_JSON" > token_info.json
+          python spotify_playlister.py || exit 1
+
+      - name: Debug file presence
+        run: |
+          echo "Directory contents:"
+          ls -la
+          ls -la playlist_records/ || echo "No playlist_records directory"
+          ls -la last_updates/ || echo "No last_updates directory"
+          for playlist in $(jq -r '.playlists[].name' playlist_config.json); do
+            if [ -f "playlist_records/${playlist}_record.json" ]; then
+              echo "playlist_records/${playlist}_record.json exists"
+            else
+              echo "playlist_records/${playlist}_record.json not found"
+            fi
+            if [ -f "last_updates/${playlist}_last_update.json" ]; then
+              echo "last_updates/${playlist}_last_update.json exists"
+            else
+              echo "last_updates/${playlist}_last_update.json not found"
+            fi
+          done
+
+      - name: Commit updated files
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add playlist_records/*.json last_updates/*.json || echo "No files to add"
+          git diff --cached --quiet && echo "No changes to commit" || git commit -m "Update playlist records and last update data after sync"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Notify on Telegram for Afrobeats on Rotation
+        if: always()
+        run: |
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage \
+            -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+            -d text="🎶 *Afrobeats on Rotation* Spotify playlist just got updated! 🔥\n\nClick below to stream trending music now:\n👉 https://open.spotify.com/playlist/1NacBkTTb3o1WAZIBVDlx8" \
+            -d parse_mode=Markdown
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      - name: Check playlist metadata for tweets
+        id: check-metadata
+        run: |
+          echo "Checking metadata for playlists"
+          echo "tweets=[]" > tweets.json
+          for playlist in $(jq -r '.playlists[] | select(.name == "Afrobeats on Rotation" or .name == "Naija Hot Hits" or .name == "Chill Afro Vibes") | .name + ":" + .target_playlist_id' playlist_config.json); do
+            playlist_name=$(echo $playlist | cut -d':' -f1)
+            playlist_id=$(echo $playlist | cut -d':' -f2)
+            record_file="playlist_records/${playlist_name}_record.json"
+            if [ -f "$record_file" ] && jq -e '.[] | select(.track != null) | .track.name' "$record_file" >/dev/null 2>&1; then
+              track_name=$(jq -r '.[] | select(.track != null) | .track.name' "$record_file" | head -1)
+              artist_name=$(jq -r '.[] | select(.track != null) | .track.artists[0].name' "$record_file" | head -1)
+              echo "Metadata found for $playlist_name: $track_name by $artist_name"
+              echo "tweets+=[{\"playlist_name\":\"$playlist_name\",\"playlist_id\":\"$playlist_id\",\"track_name\":\"$track_name\",\"artist_name\":\"$artist_name\"}]" >> tweets.json
+            else
+              echo "No metadata found for $playlist_name"
+            fi
+          done
+          cat tweets.json
+
+      - name: Generate and post tweets
+        id: generate-tweet
+        continue-on-error: true
+        run: |
+          RANDOM_SUFFIX=$(date +%s | sha256sum | head -c 8)
+          TWEET_TEMPLATES=(
+            "🎶 Fresh {playlist_name} update for $(date +%Y-%m-%d)! 🔥 Top track: {track_name} by {artist_name}. Stream now: https://open.spotify.com/playlist/{playlist_id} #Afrobeats [$RANDOM_SUFFIX]"
+            "🕺 New {playlist_name} vibes on $(date +%Y-%m-%d)! 🎵 Kicking off with {track_name} by {artist_name}. Tune in: https://open.spotify.com/playlist/{playlist_id} #AfroFusion [$RANDOM_SUFFIX]"
+            "🔥 {playlist_name} just dropped new tracks on $(date +%Y-%m-%d)! Leading with {track_name} by {artist_name}. Listen now: https://open.spotify.com/playlist/{playlist_id} #Afrobeats #Playlist [$RANDOM_SUFFIX]"
+            "🎉 Updated {playlist_name} on $(date +%Y-%m-%d)! Start with {track_name} by {artist_name}. Get grooving: https://open.spotify.com/playlist/{playlist_id} #AfroVibes [$RANDOM_SUFFIX]"
+            "💃 {playlist_name} refreshed on $(date +%Y-%m-%d)! Top pick: {track_name} by {artist_name}. Stream it: https://open.spotify.com/playlist/{playlist_id} #Afrobeats #NewMusic [$RANDOM_SUFFIX]"
+          )
+          FALLBACK_TWEETS=(
+            "🎶 {playlist_name} updated on $(date +%Y-%m-%d)! 🔥 Stream the latest vibes: https://open.spotify.com/playlist/{playlist_id} #Afrobeats [$RANDOM_SUFFIX]"
+            "🕺 New {playlist_name} alert for $(date +%Y-%m-%d)! 🎵 Tune in now: https://open.spotify.com/playlist/{playlist_id} #AfroFusion [$RANDOM_SUFFIX]"
+            "🔥 Fresh {playlist_name} drop on $(date +%Y-%m-%d)! Get listening: https://open.spotify.com/playlist/{playlist_id} #Afrobeats #Music [$RANDOM_SUFFIX]"
+          )
+          while IFS= read -r tweet_data; do
+            playlist_name=$(echo "$tweet_data" | jq -r '.playlist_name')
+            playlist_id=$(echo "$tweet_data" | jq -r '.playlist_id')
+            track_name=$(echo "$tweet_data" | jq -r '.track_name // ""')
+            artist_name=$(echo "$tweet_data" | jq -r '.artist_name // ""')
+            if [ -n "$track_name" ] && [ -n "$artist_name" ]; then
+              TEMPLATE=$(printf "%s\n" "${TWEET_TEMPLATES[@]}" | shuf -n 1)
+              TWEET_MESSAGE=$(echo "$TEMPLATE" | sed "s/{playlist_name}/$playlist_name/" | sed "s/{track_name}/$track_name/" | sed "s/{artist_name}/$artist_name/" | sed "s/{playlist_id}/$playlist_id/")
+            else
+              TEMPLATE=$(printf "%s\n" "${FALLBACK_TWEETS[@]}" | shuf -n 1)
+              TWEET_MESSAGE=$(echo "$TEMPLATE" | sed "s/{playlist_name}/$playlist_name/" | sed "s/{playlist_id}/$playlist_id/")
+            fi
+            echo "Posting tweet for $playlist_name: $TWEET_MESSAGE"
+            curl -s -X POST https://api.twitter.com/2/tweets \
+              -H "Authorization: Bearer ${{ secrets.TWITTER_BEARER_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"text\": \"$TWEET_MESSAGE\"}" || echo "Failed to post tweet for $playlist_name"
+            sleep 5 # Delay to avoid Twitter rate limits
+          done < <(jq -c '.[]' tweets.json)
+
+      - name: Log Twitter post failures
+        if: steps.generate-tweet.outcome == 'failure'
+        run: |
+          echo "Twitter post failed for one or more playlists."
+          echo "Check Twitter app permissions, OAuth tokens, and account status (@your_handle)."
+          echo "Ensure TWITTER_BEARER_TOKEN is valid in GitHub Secrets."
+          echo "Verify account is not suspended or restricted at twitter.com."
+          echo "Regenerate tokens at developer.twitter.com if needed."
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playlist-updater-logs
+          path: spotify_playlister.log

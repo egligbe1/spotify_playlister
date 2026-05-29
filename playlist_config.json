@@ -1,0 +1,298 @@
+{
+  "playlists": [
+    {
+      "name": "Afrobeats on Rotation",
+      "target_playlist_id": "1NacBkTTb3o1WAZIBVDlx8",
+      "source_playlists": [
+        "5myeBzohhCVewaK2Thqmo5"
+      ],
+      "priority_songs": [
+        "3RcnE81xkgBr7av1elOLV8",
+        "5TVVwofXNJnlI5XtVErTlL"
+      ],
+      "description_template": "Latest Afrobeats vibes featuring {} and more!",
+      "max_songs": 70,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "Naija Hot Hits",
+      "target_playlist_id": "6hpMoezttClWaqVbzMZfPM",
+      "source_playlists": [
+        "0VRrsChND56p77FczOUBbp"
+      ],
+      "priority_songs": [
+        "3RcnE81xkgBr7av1elOLV8",
+        "2kJtyjaHRb5lKma4Wy8i7s"
+      ],
+      "description_template": "Relaxing tunes with {} and more!",
+      "max_songs": 70,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "Chill Afro Vibes",
+      "target_playlist_id": "2jjdqZdtH2wVN0OjQcjdaK",
+      "source_playlists": [
+        "0WJqvZHeQ47BXShNcoYiPW",
+        "4lU48dE3JqxAgNft6Lx0WC"
+      ],
+      "priority_songs": [
+        "04LwWjNpLtT9Lnxw8jEw7F",
+        "2kJtyjaHRb5lKma4Wy8i7s",
+        "4dgniZacX7WJz7jTSG9t4z",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "afrobeats: best served chilled.",
+      "max_songs": 70,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "Workout Energy",
+      "target_playlist_id": "6ZSAvN70G9hdFNtazrHKO1",
+      "source_playlists": [
+        "7gvqC9vz8pPdnn3P3M4AAg"
+      ],
+      "priority_songs": [
+        "04LwWjNpLtT9Lnxw8jEw7F",
+        "4dgniZacX7WJz7jTSG9t4z",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "High energy workout mix featuring {}. ",
+      "max_songs": 70,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "late night chill vibes",
+      "target_playlist_id": "46s8ZQypznfdUxDLlNMfsJ",
+      "source_playlists": [
+        "5fuapK5Ng0OuGi46TJM8Nn"
+      ],
+      "priority_songs": [
+      "4dgniZacX7WJz7jTSG9t4z",
+      "1FkuGLWtSdPMEgONzusCwH"],
+      "description_template": "Late night vibes with {}.",
+      "max_songs": 70,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "Weekend Party",
+      "target_playlist_id": "4UMk5Pr71clB6QJRaRIZpb",
+      "source_playlists": [
+        "3jtttW0WBSqL8kWwXADXOJ"
+      ],
+      "priority_songs": [
+      "4dgniZacX7WJz7jTSG9t4z",
+      "1FkuGLWtSdPMEgONzusCwH"],
+      "description_template": "Weekend party mix with {} and more!",
+      "max_songs": 80,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "Best Afrobeats Party Mix",
+      "target_playlist_id": "3MTIWg0xMEvm6jhCu6tgBO",
+      "source_playlists": [
+        "5WNgWXiGD1STuroWIZDfub",
+        "6xwBhWuFwOySNZtxDZjzcS"
+      ],
+      "priority_songs": [],
+      "description_template": "Afrobeats party mix with {} and more!",
+      "max_songs": 80,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "TOP HITS IN GHANA",
+      "target_playlist_id": "4HTcVZhv0uVORvsRhozvGA",
+      "source_playlists": [
+        "4t5QcqXgA5gmtomjxt774E"
+      ],
+      "priority_songs": [
+        "3RcnE81xkgBr7av1elOLV8"
+      ],
+      "description_template": "Top Hits in Ghana with {} and more!",
+      "max_songs": 80,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "AFRO HOUSE MIX",
+      "target_playlist_id": "2bT7HfYMzUy3mTKvLJftDP",
+      "source_playlists": [
+        "580P0wvHL8eRYyEODWQAeR"
+      ],
+      "priority_songs": ["3CmlpwhlM0ZNe1rggu7him",
+      "4dgniZacX7WJz7jTSG9t4z",
+        "1FkuGLWtSdPMEgONzusCwH"],
+      "description_template": "Afro House mix with {} and more!",
+      "max_songs": 80,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "FUTURE BASS 2025",
+      "target_playlist_id": "01aCl2C1PyekZ2pGeyKfzN",
+      "source_playlists": [
+        "5mZaNT0CzJWHrWuE3xRopB"
+      ],
+      "priority_songs": ["3CmlpwhlM0ZNe1rggu7him",
+          "4dgniZacX7WJz7jTSG9t4z",
+          "1FkuGLWtSdPMEgONzusCwH"],
+      "description_template": "Future Bass music for you to enjoy!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "TRANCE MUSIC 2025",
+      "target_playlist_id": "2ypN3O58dpvp9RgA2LG90Z",
+      "source_playlists": [
+        "0Q3ugz23LAXFg2PvXJ8hMx"
+      ],
+      "priority_songs": ["3CmlpwhlM0ZNe1rggu7him",
+      "4dgniZacX7WJz7jTSG9t4z",
+        "1FkuGLWtSdPMEgONzusCwH"],
+      "description_template": "Trance music for you to enjoy!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "EDM TECHNO 2025",
+      "target_playlist_id": "7glsMaaTFfDvLbLtnGXXAC",
+      "source_playlists": [
+        "3oEXfT2t2EZFSHxmRIL4A0"
+      ],
+      "priority_songs": [
+        "3CmlpwhlM0ZNe1rggu7him",
+        "4dgniZacX7WJz7jTSG9t4z",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "EDM Techno music for you to enjoy!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "EDM PARTY 2025",
+      "target_playlist_id": "2Zs0uVWbaVFPSYFrTrv2Ms",
+      "source_playlists": [
+        "5PCv6afEatU3z9cq2fBPDs"
+      ],
+      "priority_songs": [
+        "3CmlpwhlM0ZNe1rggu7him",
+        "4dgniZacX7WJz7jTSG9t4z",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "EDM party mix with {} and more!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "Alex Warren - Ordinary with Friends",
+      "target_playlist_id": "2G1EDpbAoQvMtX10GHhI2n",
+      "source_playlists": [
+        "0nBdTD4blUYFfb34S4eIzI",
+        "7zBneajPzFm0Z40m6oRUtr"
+      ],
+      "priority_songs": [
+        "6qqrTXSdwiJaq8SO0X2lSe",
+        "6wHpLMmp98aHcV8L1JFrj8",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "Tap ⨁ to hear new Alex Warren songs as soon as they drop!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "Bruno Mars - Die with a Smile",
+      "target_playlist_id": "0c919xDwytG72sTGDsAhU0",
+      "source_playlists": [
+        "1F4XAuSWIgdvi2tqbumHcE"
+      ],
+      "priority_songs": [
+        "2plbrEY59IikOBgBGLjaoe",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "Tap ⨁ to hear new Bruno Mars songs as soon as they drop!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "Dean Lewis - With You",
+      "target_playlist_id": "1CdDqJrszFpggH088RAe9o",
+      "source_playlists": [
+        "4FPxBSqX4BU88sEO07mCS5"
+      ],
+      "priority_songs": [
+        "7mdJAkMBPkKYOLxcVPDqa0",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "Tap ⨁ to hear new Dean Lewis songs as soon as they drop!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "Doja Cat - Jealous Type",
+      "target_playlist_id": "6n6hr2QEO0SMVkHphctoK4",
+      "source_playlists": [
+        "3kksNa7iaoiMHK0B2QtAOE"
+      ],
+      "priority_songs": [
+        "03JZr55j9bIj1d2RQJ7Yq9",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "Tap ⨁ to hear new Doja Cat songs as soon as they drop!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    
+    {
+      "name": "Sabrina Carpenter - Man's Best Friend",
+      "target_playlist_id": "5YSt2FS2A3CRE8KYBPRF3K",
+      "source_playlists": [
+        "7IOitp0zeXho4mDiYnKPHh"
+      ],
+      "priority_songs": [
+        "2BwO5K8Q7EPAJSGze3AAh9",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "Tap ⨁ to hear new Sabrina Carpenter songs as soon as they drop!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    {
+      "name": "Ariana Grande - eternal sunshine",
+      "target_playlist_id": "0BbmwdZXi27fo9GuuIqY2H",
+      "source_playlists": [
+        "2UrZudVtKmKk9c2hqrj155"
+      ],
+      "priority_songs": [
+        "5Tfrr45yeatPJJts3NkOBS",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "Tap ⨁ to hear new Ariana Grande songs as soon as they drop!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    },
+    
+    {
+      "name": "The Weeknd - After Hours",
+      "target_playlist_id": "4SxLZfj2yMLtIRqhTcW8B7",
+      "source_playlists": [
+        "2nRn1AnLMuuPdT47jzPd4E"
+      ],
+      "priority_songs": [
+        "2p8IUWQDrpjuFltbdgLOag",
+        "2p8IUWQDrpjuFltbdgLOag",
+        "1FkuGLWtSdPMEgONzusCwH"
+      ],
+      "description_template": "Tap ⨁ to hear new The Weeknd songs as soon as they drop!",
+      "max_songs": 100,
+      "update_schedule": "saturday"
+    }
+
+
+  ],
+  "global_settings": {
+    "update_day": "saturday",
+    "max_retries": 3,
+    "timeout": 30,
+    "contact_email": "skeledon246@gmail.com",
+    "reorder_strategy": "smart",
+    "new_track_threshold_days": 7,
+    "randomize_within_groups": true
+  }
+}
