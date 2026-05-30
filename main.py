@@ -416,7 +416,7 @@ def _update_cover(sp, playlist_id, track_ids):
         img = Image.open(io.BytesIO(resp.content)).resize((640, 640), Image.Resampling.LANCZOS).convert('RGBA')
         badge_size = int(640 * 0.15)
         badge = _make_spotify_badge(badge_size)
-        margin = int(640 * 0.015)
+        margin = 6
         pos = _quietest_corner(img.convert('RGB'), badge_size, margin)
         img.alpha_composite(badge, pos)
         img = img.convert('RGB')
