@@ -7,7 +7,7 @@ import os
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
-from PIL import Image
+from PIL import Image, ImageDraw
 import io
 import base64
 from time import sleep
@@ -333,8 +333,29 @@ def _collect_cover_urls(sp, track_ids, count=4):
     return urls
 
 
+def _make_spotify_badge(size: int = 100) -> Image.Image:
+    """Draw a Spotify-style badge: green circle with three white wave bars."""
+    badge = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(badge)
+    # Spotify green circle
+    draw.ellipse([0, 0, size - 1, size - 1], fill=(29, 185, 84, 220))
+    # Three white rounded bars — top shortest, bottom widest (like the Spotify logo)
+    cx = size // 2
+    bar_defs = [
+        (0.26, 0.41, 0.46),  # (y_top_ratio, y_bot_ratio, width_ratio)
+        (0.50, 0.65, 0.64),
+        (0.74, 0.89, 0.78),
+    ]
+    for yr0, yr1, wr in bar_defs:
+        y0, y1 = int(size * yr0), int(size * yr1)
+        hw = int(size * wr / 2)
+        r = (y1 - y0) // 2
+        draw.rounded_rectangle([cx - hw, y0, cx + hw, y1], radius=r, fill=(255, 255, 255, 255))
+    return badge
+
+
 def _update_cover(sp, playlist_id, track_ids):
-    """Upload the first available album art (640×640 JPEG) as the playlist cover."""
+    """Upload album art with Spotify badge embossed in bottom-right corner."""
     if not track_ids:
         return
     try:
@@ -344,7 +365,13 @@ def _update_cover(sp, playlist_id, track_ids):
             return
         resp = requests.get(urls[0], timeout=TIMEOUT)
         resp.raise_for_status()
-        img = Image.open(io.BytesIO(resp.content)).resize((640, 640), Image.Resampling.LANCZOS).convert('RGB')
+        img = Image.open(io.BytesIO(resp.content)).resize((640, 640), Image.Resampling.LANCZOS).convert('RGBA')
+        # Emboss Spotify badge in bottom-right corner (~17% of image width)
+        badge_size = int(640 * 0.17)
+        badge = _make_spotify_badge(badge_size)
+        margin = int(640 * 0.04)
+        img.alpha_composite(badge, (640 - badge_size - margin, 640 - badge_size - margin))
+        img = img.convert('RGB')
         buf = io.BytesIO()
         img.save(buf, format='JPEG', quality=85)
         encoded = base64.b64encode(buf.getvalue()).decode('utf-8')
