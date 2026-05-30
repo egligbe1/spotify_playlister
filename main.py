@@ -378,8 +378,32 @@ def _make_spotify_badge(size: int = 83) -> Image.Image:
         return badge
 
 
+def _quietest_corner(img_rgb, badge_size, margin):
+    """Return (x, y) of the corner with the least visual complexity."""
+    import numpy as np
+    arr = np.array(img_rgb).astype(float)
+    w = badge_size + margin * 2
+    h_img = arr.shape[0]
+    w_img = arr.shape[1]
+    corners = {
+        'tl': arr[:w, :w],
+        'tr': arr[:w, w_img - w:],
+        'bl': arr[h_img - w:, :w],
+        'br': arr[h_img - w:, w_img - w:],
+    }
+    positions = {
+        'tl': (margin, margin),
+        'tr': (w_img - badge_size - margin, margin),
+        'bl': (margin, h_img - badge_size - margin),
+        'br': (w_img - badge_size - margin, h_img - badge_size - margin),
+    }
+    # Pick corner with lowest standard deviation (most uniform = least busy)
+    quietest = min(corners, key=lambda k: corners[k].std())
+    return positions[quietest]
+
+
 def _update_cover(sp, playlist_id, track_ids):
-    """Upload album art with Spotify watermark in top-left corner."""
+    """Upload album art with Spotify badge placed in the quietest corner."""
     if not track_ids:
         return
     try:
@@ -390,11 +414,11 @@ def _update_cover(sp, playlist_id, track_ids):
         resp = requests.get(urls[0], timeout=TIMEOUT)
         resp.raise_for_status()
         img = Image.open(io.BytesIO(resp.content)).resize((640, 640), Image.Resampling.LANCZOS).convert('RGBA')
-        # Spotify logo badge in top-left (~15% of image width)
         badge_size = int(640 * 0.15)
         badge = _make_spotify_badge(badge_size)
-        margin = int(640 * 0.03)
-        img.alpha_composite(badge, (margin, margin))
+        margin = int(640 * 0.015)
+        pos = _quietest_corner(img.convert('RGB'), badge_size, margin)
+        img.alpha_composite(badge, pos)
         img = img.convert('RGB')
         buf = io.BytesIO()
         img.save(buf, format='JPEG', quality=85)
