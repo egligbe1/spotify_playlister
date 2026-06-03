@@ -188,6 +188,32 @@
       "priority_songs": []
     },
 
+    {
+      "id": "4ZUZ9Fy2nPx90YcUs7XuLl",
+      "type": "genre",
+      "name": "Dancehall Hits",
+      "description": "The hottest Dancehall hits. Featuring {0} and more. Best of reggae and dancehall updated weekly. Submissions: skeledon246@gmail.com.",
+      "max_songs": 80,
+      "public": true,
+      "search_queries": ["dancehall hits 2025", "dancehall reggae 2025", "dancehall banger", "best dancehall songs"],
+      "source_playlists": [],
+      "priority_songs": []
+    },
+    {
+      "id": "0cpyA5fWwzF6UGuktkEHJC",
+      "type": "genre",
+      "name": "90s Dancehall Classics",
+      "description": "The greatest 90s Dancehall classics. Featuring {0} and more. Golden era reggae and dancehall. Updated weekly. Submissions: skeledon246@gmail.com.",
+      "max_songs": 80,
+      "public": true,
+      "search_queries": ["90s dancehall classics", "dancehall 1990s hits", "golden era dancehall reggae", "classic dancehall sean paul beenie man"],
+      "source_playlists": [],
+      "priority_songs": [
+        {"track_id": "2TEm3xgjFBKJMFOzHIXaRD", "song_name": "Temperature", "artist_name": "Sean Paul"},
+        {"track_id": "0n5PQ5OleYJAz36ddhGb6X", "song_name": "Who Am I (Sim Simma)", "artist_name": "Beenie Man"}
+      ]
+    },
+
     // ── ARTIST PLAYLISTS ─────────────────────────────────────────────────────
     {
       "id": "3Z7SiMpsyyZjJJiUNWKFck",
