@@ -214,6 +214,29 @@
       ]
     },
 
+    {
+      "id": "4SyOF3cjhZTwJW5tIJLeFF",
+      "type": "genre",
+      "name": "Emotional Dancehall",
+      "description": "The most emotional and heartfelt Dancehall songs. Featuring {0} and more. Love, pain, and real stories. Updated weekly. Submissions: skeledon246@gmail.com.",
+      "max_songs": 70,
+      "public": true,
+      "search_queries": ["emotional dancehall songs", "dancehall love songs", "heartfelt reggae dancehall", "sad dancehall 2025"],
+      "source_playlists": [],
+      "priority_songs": []
+    },
+    {
+      "id": "4Ud6VRvNDTDLdw3vqt49ST",
+      "type": "genre",
+      "name": "Trap Dancehall",
+      "description": "Trap Dancehall bangers. Featuring {0} and more. Hard beats meets Caribbean riddims. Updated weekly. Submissions: skeledon246@gmail.com.",
+      "max_songs": 80,
+      "public": true,
+      "search_queries": ["trap dancehall 2025", "dancehall trap beats", "skillibeng trap dancehall", "caribbean trap music 2025"],
+      "source_playlists": [],
+      "priority_songs": []
+    },
+
     // ── ARTIST PLAYLISTS ─────────────────────────────────────────────────────
     {
       "id": "3Z7SiMpsyyZjJJiUNWKFck",
