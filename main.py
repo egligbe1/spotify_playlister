@@ -71,16 +71,28 @@ def is_connected():
 # Spotify helpers
 # ---------------------------------------------------------------------------
 
-def fetch_playlist_track_ids(sp, playlist_id):
-    """Fetch all track IDs from a playlist, following pagination."""
+def fetch_playlist_track_ids(sp, playlist_id, limit=None):
+    """Fetch playlist track IDs, optionally stopping after a maximum count."""
     track_ids = []
-    results = sp.playlist_tracks(playlist_id, fields='items.track.id,next')
+    items_fetched = 0
+    page_limit = min(100, limit) if limit is not None else 100
+    results = sp.playlist_tracks(
+        playlist_id,
+        fields='items.track.id,next',
+        limit=page_limit,
+    )
     while results:
+        items = results['items']
+        if limit is not None:
+            items = items[:limit - items_fetched]
+        items_fetched += len(items)
         track_ids.extend(
             item['track']['id']
-            for item in results['items']
+            for item in items
             if item.get('track') and item['track'].get('id')
         )
+        if limit is not None and items_fetched >= limit:
+            break
         results = sp.next(results) if results.get('next') else None
     logger.debug(f"Fetched {len(track_ids)} tracks from playlist {playlist_id}")
     return track_ids
@@ -118,6 +130,8 @@ def fetch_trending_songs(sp, search_queries, explicit_playlist_ids=None, limit=4
 
     # 2. Search-based discovery
     for query in search_queries:
+        if len(trending_ids) >= limit:
+            break
         try:
             results = sp.search(q=query, type='playlist', limit=3)
             playlists = results.get('playlists', {}).get('items', [])
@@ -128,7 +142,7 @@ def fetch_trending_songs(sp, search_queries, explicit_playlist_ids=None, limit=4
                 if pid in seen_playlists:
                     continue
                 seen_playlists.add(pid)
-                tracks = fetch_playlist_track_ids(sp, pid)
+                tracks = fetch_playlist_track_ids(sp, pid, limit=25)
                 added = 0
                 for tid in tracks[:25]:  # cap per playlist to maintain variety
                     if tid not in seen_tracks:
@@ -136,8 +150,12 @@ def fetch_trending_songs(sp, search_queries, explicit_playlist_ids=None, limit=4
                         trending_ids.append(tid)
                         added += 1
                 logger.info(f"Search '{query}' → '{playlist.get('name')}': added {added} tracks")
+                if len(trending_ids) >= limit:
+                    break
         except Exception as e:
             logger.warning(f"Search trending discovery failed for '{query}': {e}")
+        if len(trending_ids) >= limit:
+            break
 
     logger.info(f"Trending songs discovered: {len(trending_ids)}")
     return trending_ids[:limit]
